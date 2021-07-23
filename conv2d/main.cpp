@@ -9,7 +9,7 @@
 #define IMROWS 1204
 #define IMCOLS 1880
 #define IMCHANNELS 1
-#define KERNELRADIUS 16 // 16x2 + 1
+#define KERNELRADIUS 8 // 8x2 + 1
 
 int main(void){
 
