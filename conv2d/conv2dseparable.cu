@@ -9,7 +9,7 @@
 #define KERNELRADIUS 16 // 16x2 + 1
 
 #define BLOCKDIM_1 16
-#define BLOCKDIM_2 4
+#define BLOCKDIM_2 8
 #define STEP 4
 
 __constant__ float c_kernel[KERNELRADIUS * 2 + 1];
@@ -49,9 +49,8 @@ void processing(float* h_input, float *h_output, float *h_kernel){
     cudaMemcpyToSymbol(c_kernel, h_kernel, kernel_size);
 
     // dimensions
-
-    dim3 dimBlock_row(BLOCKDIM_1, BLOCKDIM_2);
     int temp = STEP * BLOCKDIM_1;
+    dim3 dimBlock_row(BLOCKDIM_1, BLOCKDIM_2);
     dim3 dimGrid_row((IMCOLS + temp - 1)/temp, (IMROWS + BLOCKDIM_2 - 1)/BLOCKDIM_2);
 
     // where magic happens
@@ -64,8 +63,7 @@ void processing(float* h_input, float *h_output, float *h_kernel){
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
 
     dim3 dimBlock_col(BLOCKDIM_2, BLOCKDIM_1);
-    int temp = STEP * BLOCKDIM_2;
-    dim3 dimGrid_col((IMCOLS + BLOCKDIM_1 - 1)/BLOCKDIM_1, (IMROWS + temp - 1)/temp);
+    dim3 dimGrid_col((IMCOLS + BLOCKDIM_2 - 1)/BLOCKDIM_2, (IMROWS + temp - 1)/temp);
     
     //col
     sdkResetTimer(&timer);
