@@ -10,7 +10,6 @@
 #define IMCOLS 1880
 #define IMCHANNELS 1
 #define KERNELRADIUS 16 // 16x2 + 1
-#define BLOCKSIZE 16
 
 int main(void){
 
@@ -60,6 +59,6 @@ int main(void){
     }*/
 
     // free
-
+    free(h_output);
     return 0;
 }
