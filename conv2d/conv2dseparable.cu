@@ -5,12 +5,28 @@
 
 #define BLOCKDIM 256
 #define STEP 4
+#define MAXKernelRadius 32
 
-__constant__ float c_kernel[256];
+__constant__ float c_kernel[64 + 1];
 
 __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
-
     
+    extern __shared__ float s_data[];
+
+    int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    int element = idx_y * img_w + idx_x;
+
+    if (threadIdx.x < kernelradius || img_w - threadIdx.x < kernelradius){
+        s_data[element] = 0;
+    }
+
+    #pragma unroll
+    for(int i = 0 ; i < STEP; i++){
+        s_data[element + i * blockDim.x] = d_input[element + i * blockDim.x];
+    }
+
 };
 __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
 
@@ -40,12 +56,13 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     int temp = STEP * BLOCKDIM;
     dim3 dimBlock(BLOCKDIM, BLOCKDIM);
     dim3 dimGrid_row((img_w + temp - 1)/temp, (img_h + BLOCKDIM - 1)/BLOCKDIM);
+    int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * kernelradius);
 
     // where magic happens
     // row
     sdkStartTimer(&timer);
     cudaProfilerStart();
-    conv2d_row<<<dimGrid_row, dimBlock>>>(d_input, d_intermediate_output, img_w, img_h, kernelradius);
+    conv2d_row<<<dimGrid_row, dimBlock, shared_mem_size, 0>>>(d_input, d_intermediate_output, img_w, img_h, kernelradius);
     cudaProfilerStop();
     sdkStopTimer(&timer);
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
@@ -56,7 +73,7 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     sdkResetTimer(&timer);
     sdkStartTimer(&timer);
     cudaProfilerStart();
-    conv2d_col<<<dimGrid_col, dimBlock>>>(d_intermediate_output, d_output, img_w, img_h, kernelradius);
+    conv2d_col<<<dimGrid_col, dimBlock, shared_mem_size, 0>>>(d_intermediate_output, d_output, img_w, img_h, kernelradius);
     cudaProfilerStop();
     sdkStopTimer(&timer);
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
