@@ -2,10 +2,7 @@
 #include <stdio.h>
 #include <helper_timer.h>
 #include <cuda_profiler_api.h>
-
-#define BLOCKDIM 256
-#define STEP 4
-#define MAXKernelRadius 32
+#include "conv2dseparable_common.h"
 
 __constant__ float c_kernel[64 + 1];
 
@@ -13,32 +10,47 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
     
     extern __shared__ float s_data[];
 
-    int idx_x = blockIdx.x * blockDim.x * STEP + threadIdx.x;
+    int idx_x = blockIdx.x * blockDim.x * STEP + threadIdx.x - blockDim.x;
     int idx_y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int src = idx_y * img_w + idx_x;
-    int dst = threadIdx.x + kernelradius + (blockDim.x + 2 * kernelradius ) * threadIdx.y;
+    // neat pointer arithmetic
+    d_input += idx_y * img_w + idx_x;
+    d_output += idx_y * img_w + idx_x;
 
+    int temp = (STEP + 2) * blockDim.x;
+
+    // main data
     #pragma unroll
-    for(int i = 0 ; i < STEP; i++){
-        s_data[dst + i * blockDim.x] = d_input[src + i * blockDim.x];
-    }
-
-    if (threadIdx.x < kernelradius){
-        if (idx_x < kernelradius){
-            s_data[threadIdx.x + threadIdx.y * (2 * kernelradius + blockDim.x)] = 0;
-        } else {
-            s_data[threadIdx.x + threadIdx.y * (2 * kernelradius + blockDim.x)] = 0;
-        }
+    for(int i = 1 ; i <= STEP; i++){
+        s_data[threadIdx.y * temp + threadIdx.x + i * blockDim.x] =  d_input[i * blockDim.x];
     }
 
 
-    if (blockDim.x - threadIdx.x < kernelradius)
-    if (img_w - idx_x < kernelradius){
-        s_data[(2 * kernelradius + blockDim.x) - threadIdx.x + threadIdx.y * (2 * kernelradius + blockDim.x)] = 0;
-    }
+    // there's an if-else but all the threads in warp evaluate to the same condition 
+    // bcs it divisible by blocksize
+    // left halo
+    s_data[threadIdx.y * temp + threadIdx.x] =  idx_x >= 0 ? d_input[blockDim.x] : 0;
+
+    // right halo
+    s_data[threadIdx.y * temp + threadIdx.x + (STEP + 1) * blockDim.x] =  (img_w > (STEP + 1) * blockDim.x + idx_x) ? d_input[(STEP + 1 ) * blockDim.x] : 0;
 
     __syncthreads;
+
+    int sum;
+
+    #pragma unroll
+    for(int i = 1; i <= STEP; i++){
+
+        sum = 0;
+
+        #pragma unroll
+        for(int j = -kernelradius; j <= kernelradius; j++){
+            sum += c_kernel[j] * s_data[threadIdx.y * temp + i * blockDim.x + j];
+        }
+
+        d_output[i * blockDim.x] = sum;
+
+    }
 };
 __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
 
@@ -68,7 +80,8 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     int temp = STEP * BLOCKDIM;
     dim3 dimBlock(BLOCKDIM, BLOCKDIM);
     dim3 dimGrid_row((img_w + temp - 1)/temp, (img_h + BLOCKDIM - 1)/BLOCKDIM);
-    int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * kernelradius) * sizeof(float);
+    // the 2 * halo is inside the 2 * BLOCKDIM - makes it easier to fill
+    int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM) * sizeof(float);
 
     // where magic happens
     // row
