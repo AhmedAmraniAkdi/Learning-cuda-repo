@@ -41,8 +41,11 @@ int main(void){
                         cv::BORDER_CONSTANT, 
                         cv::Scalar(0));
 
-    assert(img_padded.rows & BLOCKDIM == 0);
-    assert(img_padded.cols & BLOCKDIM == 0);
+    //std::cout<< img_padded.rows << " " << BLOCKDIM << " " << (img_padded.rows & (BLOCKDIM - 1)) << " " << (img_padded.rows%BLOCKDIM) << std::endl;
+    //std::cout<< img_padded.cols << " " << BLOCKDIM << " " << (img_padded.cols & (BLOCKDIM - 1)) << " " << (img_padded.cols%BLOCKDIM) << std::endl;
+
+    assert((img_padded.rows & (BLOCKDIM - 1)) == 0);
+    assert((img_padded.cols & (BLOCKDIM - 1)) == 0);
 
     // gaussian_kernel1D = gaussian_kernel1D conv dirac;
     cv::Mat dirac(cv::Size(1, KERNELRADIUS*2 + 1), CV_32FC1, cv::Scalar(0));
@@ -60,6 +63,9 @@ int main(void){
     h_output = (float *)malloc(buf_size);
 
     //processing(h_input, h_output, h_kernel, img_padded.cols, img_padded.rows, KERNELRADIUS);
+
+    cv::Mat img_output_padded(img_padded.rows, img_padded.cols, CV_32FC1, h_output);
+    cv::Mat img_output = img_output_padded(cv::Rect(0, 0, img.cols, img.rows));
 
     imshow("Display window", img_padded);
     int k = cv::waitKey(0); // Wait for a keystroke in the window
