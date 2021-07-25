@@ -13,20 +13,32 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
     
     extern __shared__ float s_data[];
 
-    int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx_x = blockIdx.x * blockDim.x * STEP + threadIdx.x;
     int idx_y = blockIdx.y * blockDim.y + threadIdx.y;
 
-    int element = idx_y * img_w + idx_x;
-
-    if (threadIdx.x < kernelradius || img_w - threadIdx.x < kernelradius){
-        s_data[element] = 0;
-    }
+    int src = idx_y * img_w + idx_x;
+    int dst = threadIdx.x + kernelradius + (blockDim.x + 2 * kernelradius ) * threadIdx.y;
 
     #pragma unroll
     for(int i = 0 ; i < STEP; i++){
-        s_data[element + i * blockDim.x] = d_input[element + i * blockDim.x];
+        s_data[dst + i * blockDim.x] = d_input[src + i * blockDim.x];
     }
 
+    if (threadIdx.x < kernelradius){
+        if (idx_x < kernelradius){
+            s_data[threadIdx.x + threadIdx.y * (2 * kernelradius + blockDim.x)] = 0;
+        } else {
+            s_data[threadIdx.x + threadIdx.y * (2 * kernelradius + blockDim.x)] = 0;
+        }
+    }
+
+
+    if (blockDim.x - threadIdx.x < kernelradius)
+    if (img_w - idx_x < kernelradius){
+        s_data[(2 * kernelradius + blockDim.x) - threadIdx.x + threadIdx.y * (2 * kernelradius + blockDim.x)] = 0;
+    }
+
+    __syncthreads;
 };
 __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
 
@@ -56,7 +68,7 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     int temp = STEP * BLOCKDIM;
     dim3 dimBlock(BLOCKDIM, BLOCKDIM);
     dim3 dimGrid_row((img_w + temp - 1)/temp, (img_h + BLOCKDIM - 1)/BLOCKDIM);
-    int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * kernelradius);
+    int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * kernelradius) * sizeof(float);
 
     // where magic happens
     // row
