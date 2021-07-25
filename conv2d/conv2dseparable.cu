@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <helper_timer.h>
+#include <helper_cuda.h>
 #include <cuda_profiler_api.h>
 #include "conv2dseparable_common.h"
 
@@ -58,7 +59,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     extern __shared__ float s_data[];
 
     int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
-    int idx_y = blockIdx.y * blockDim.y  * STEP + threadIdx.y - blockDim.y;
+    int idx_y = blockIdx.y * blockDim.y * STEP + threadIdx.y - blockDim.y;
 
     // neat pointer arithmetic
     d_input += idx_y * img_w + idx_x;
@@ -134,6 +135,7 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     conv2d_row<<<dimGrid_row, dimBlock, shared_mem_size, 0>>>(d_input, d_intermediate_output, img_w, img_h, kernelradius);
     cudaProfilerStop();
     sdkStopTimer(&timer);
+    checkCudaErrors(cudaGetLastError());
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
 
     dim3 dimGrid_col(img_w/BLOCKDIM, img_h/temp);
@@ -145,6 +147,7 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     conv2d_col<<<dimGrid_col, dimBlock, shared_mem_size, 0>>>(d_intermediate_output, d_output, img_w, img_h, kernelradius);
     cudaProfilerStop();
     sdkStopTimer(&timer);
+    checkCudaErrors(cudaGetLastError());
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
     
     cudaDeviceSynchronize();

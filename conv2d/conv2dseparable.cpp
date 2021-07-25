@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
+#include <assert.h>
 
 #include "conv2dseparable_common.h"
 
@@ -40,6 +41,9 @@ int main(void){
                         cv::BORDER_CONSTANT, 
                         cv::Scalar(0));
 
+    assert(img_padded.rows & BLOCKDIM == 0);
+    assert(img_padded.cols & BLOCKDIM == 0);
+
     // gaussian_kernel1D = gaussian_kernel1D conv dirac;
     cv::Mat dirac(cv::Size(1, KERNELRADIUS*2 + 1), CV_32FC1, cv::Scalar(0));
     dirac.at<float>(1, KERNELRADIUS) = 1;
@@ -55,14 +59,14 @@ int main(void){
     h_kernel = gaussian_kernel.ptr<float>(0);
     h_output = (float *)malloc(buf_size);
 
-    processing(h_input, h_output, h_kernel, img_padded.cols, img_padded.rows, KERNELRADIUS);
+    //processing(h_input, h_output, h_kernel, img_padded.cols, img_padded.rows, KERNELRADIUS);
 
-    /*imshow("Display window", img);
+    imshow("Display window", img_padded);
     int k = cv::waitKey(0); // Wait for a keystroke in the window
     if(k == 's')
     {
-        imwrite("gray_apple.jpeg", img);
-    }*/
+        imwrite("result.jpeg", img);
+    }
 
     // free
     free(h_output);
