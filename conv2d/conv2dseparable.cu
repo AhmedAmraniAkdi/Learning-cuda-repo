@@ -35,7 +35,7 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
     // right halo
     s_data[threadIdx.y * temp + threadIdx.x + (STEP + 1) * blockDim.x] =  (img_w > (STEP + 1) * blockDim.x + idx_x) ? d_input[(STEP + 1 ) * blockDim.x] : 0;
 
-    __syncthreads;
+    //__syncthreads;
 
     int sum;
 
@@ -82,7 +82,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     // right halo
     s_data[threadIdx.x * temp + threadIdx.y + (STEP + 1) * blockDim.y] =  (img_h > (STEP + 1) * blockDim.y + idx_y) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
 
-    __syncthreads;
+    //__syncthreads;
 
     int sum;
 
@@ -105,7 +105,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
 // add err checking
 void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int img_h, int kernelradius){
     // variables for device
-    float *d_input, *d_intermediate_output, *d_output, *d_kernel;
+    float *d_input, *d_intermediate_output, *d_output;
     int buf_size = img_w * img_h * sizeof(float);
     int kernel_size = (kernelradius * 2 + 1) * sizeof(float);
 

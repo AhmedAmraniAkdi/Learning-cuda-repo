@@ -1,30 +1,40 @@
 # https://stackoverflow.com/questions/9421108/how-can-i-compile-cuda-code-then-link-it-to-a-c-project
 
+# windows - need to set env vars with vcvars64.bat when using cl from command line
 
-INCOPENCV = -L "E:\\programs\\cpp_libs\\opencv\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64\\include"
-LIBOPENCV = -L "E:\\programs\\cpp_libs\\opencv\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64\\x64\\mingw\\bin" \                
-                -llibopencv_calib3d411 \ 
-                -llibopencv_core411 \ 
-                -llibopencv_dnn411 \ 
-                -llibopencv_features2d411 \ 
-                -llibopencv_flann411 \ 
-                -llibopencv_highgui411 \ 
-                -llibopencv_imgcodecs411 \ 
-                -llibopencv_imgproc411 \ 
-                -llibopencv_ml411 \ 
-                -llibopencv_objdetect411 \ 
-                -llibopencv_photo411 \ 
-                -llibopencv_stitching411 \ 
-                -llibopencv_video411 \ 
-                -llibopencv_videoio411 \ 
+#snatched from visual studio
+CL_OPT = /EHsc
 
-LIBCUDA = -L "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.0\lib\x64" -lcuda -lcudart
+INCLUDEOPENCV = /I "E:\\programs\\cpp_libs\\opencv\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64\\include"
 
+LIBDIROPENCV = /LIBPATH:"E:\\programs\\cpp_libs\\opencv\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64\\x64\\mingw\\bin" \
 
-all: conv2dseparable
+LIBSOPENCV = libopencv_calib3d411 \
+libopencv_core411 \
+libopencv_dnn411 \
+libopencv_features2d411 \
+libopencv_flann411 \
+libopencv_highgui411 \
+libopencv_imgcodecs411 \
+libopencv_imgproc411 \
+libopencv_ml411 \
+libopencv_objdetect411 \
+libopencv_photo411 \
+libopencv_stitching411 \
+libopencv_video411 \
+libopencv_videoio411 \
 
-conv2dseparable: cudacode.o
-    g++ conv2dseparable.cpp -o conv2dseparable $(LIBCUDA) cudacode.o $(INCOPENCV) $(LIBOPENCV)
+LIBDIRCUDA = /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.0\lib\x64" 
 
-cudacode.o:
-    nvcc -c -arch=sm_50 conv2dseparable.cu
+LIBSCUDA = cuda cudart
+
+INCSAMPLES_H = -I "C:\ProgramData\NVIDIA Corporation\CUDA Samples\v11.0\common\inc"
+
+all: main
+cuda: conv2dseparable.obj
+
+main: conv2dseparable.obj
+	cl $(CL_OPT) main.cpp $< $(LIBSCUDA) $(LIBSOPENCV) $(INCLUDECOPENCV) /link $(LIBDIROPENCV) $(LIBDIRCUDA)
+
+conv2dseparable.obj:
+	nvcc -c -arch=sm_50 conv2dseparable.cu -Wno-deprecated-gpu-targets $(INCSAMPLES_H)
