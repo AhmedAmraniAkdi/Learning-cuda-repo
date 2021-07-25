@@ -4,7 +4,7 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "E:\\programs\\cpp_libs\\opencv\\OpenCV-MinGW-Build-OpenCV-4.1.1-x64\\include",
+                "E:\\programs\\cpp_libs\\opencv\\build\\include",
                 "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\include",
                 "C:\\ProgramData\\NVIDIA Corporation\\CUDA Samples\\v11.0\\common\\inc"
             ],
