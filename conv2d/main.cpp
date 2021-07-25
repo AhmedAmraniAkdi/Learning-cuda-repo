@@ -70,7 +70,7 @@ int main(void){
     cv::Mat img_output_padded(img_padded.rows, img_padded.cols, CV_32FC1, h_output);
     cv::Mat img_output = img_output_padded(cv::Rect(0, 0, img.cols, img.rows));
 
-    imshow("Display window", img_padded);
+    imshow("Display window", img_output);
     int k = cv::waitKey(0); // Wait for a keystroke in the window
     if(k == 's')
     {

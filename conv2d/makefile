@@ -23,7 +23,9 @@ LIBSCUDA = cuda.lib cudart.lib
 
 INCSAMPLES_H = -I "C:\ProgramData\NVIDIA Corporation\CUDA Samples\v11.0\common\inc"
 
-all: main
+.PHONY: all
+all: remove main
+
 cuda: conv2dseparable.obj
 
 main: conv2dseparable.obj
