@@ -16,7 +16,10 @@ int roundup_2power(int number, int multiple){
 
 int main(void){
 
+    std::cout<<"starting\n";
+
     std::string image_path = cv::samples::findFile("gray_apple.jpeg");
+
     cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
     
     if(img.empty())
@@ -62,7 +65,7 @@ int main(void){
     h_kernel = gaussian_kernel.ptr<float>(0);
     h_output = (float *)malloc(buf_size);
 
-    //processing(h_input, h_output, h_kernel, img_padded.cols, img_padded.rows, KERNELRADIUS);
+    processing(h_input, h_output, h_kernel, img_padded.cols, img_padded.rows, KERNELRADIUS);
 
     cv::Mat img_output_padded(img_padded.rows, img_padded.cols, CV_32FC1, h_output);
     cv::Mat img_output = img_output_padded(cv::Rect(0, 0, img.cols, img.rows));

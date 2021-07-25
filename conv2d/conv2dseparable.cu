@@ -128,6 +128,8 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     // the 2 * halo is inside the 2 * BLOCKDIM - makes it easier to fill
     int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM) * sizeof(float);
 
+    //std::cout<< img_w/temp << " " << img_h/BLOCKDIM << " " << BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM);
+
     // where magic happens
     // row
     sdkStartTimer(&timer);

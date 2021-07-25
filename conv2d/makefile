@@ -28,6 +28,12 @@ cuda: conv2dseparable.obj
 
 main: conv2dseparable.obj
 	cl $(CL_OPT) main.cpp $< $(LIBSCUDA) $(LIBSOPENCV) $(INCLUDEOPENCV) /link $(LIBDIROPENCV) $(LIBDIRCUDA)
+#	cl $(CL_OPT) main.cpp $(LIBSOPENCV) $(INCLUDEOPENCV) /link $(LIBDIROPENCV)
 
 conv2dseparable.obj:
 	nvcc -c -arch=sm_50 conv2dseparable.cu -Wno-deprecated-gpu-targets $(INCSAMPLES_H)
+
+.PHONY: remove
+remove:
+	del *.obj *.exe 
+
