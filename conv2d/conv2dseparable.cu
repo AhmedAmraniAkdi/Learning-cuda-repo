@@ -29,7 +29,7 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
     // there's an if-else but all the threads in warp evaluate to the same condition 
     // bcs it divisible by blocksize
     // left halo
-    s_data[threadIdx.y * temp + threadIdx.x] =  idx_x >= 0 ? d_input[blockDim.x] : 0;
+    s_data[threadIdx.y * temp + threadIdx.x] =  idx_x >= 0 ? d_input[0] : 0;
 
     // right halo
     s_data[threadIdx.y * temp + threadIdx.x + (STEP + 1) * blockDim.x] =  (img_w > (STEP + 1) * blockDim.x + idx_x) ? d_input[(STEP + 1 ) * blockDim.x] : 0;
@@ -52,8 +52,52 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
 
     }
 };
+
 __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
 
+    extern __shared__ float s_data[];
+
+    int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
+    int idx_y = blockIdx.y * blockDim.y  * STEP + threadIdx.y - blockDim.y;
+
+    // neat pointer arithmetic
+    d_input += idx_y * img_w + idx_x;
+    d_output += idx_y * img_w + idx_x;
+
+    int temp = (STEP + 2) * blockDim.y;
+
+    // main data
+    #pragma unroll
+    for(int i = 1 ; i <= STEP; i++){
+        s_data[threadIdx.x * temp + threadIdx.y + i * blockDim.y] =  d_input[i * img_w * blockDim.y]; //read vertical - write horizontal
+    }
+
+
+    // there's an if-else but all the threads in warp evaluate to the same condition 
+    // bcs it divisible by blocksize
+    // left halo
+    s_data[threadIdx.x * temp + threadIdx.y] =  idx_y >= 0 ? d_input[0] : 0;
+
+    // right halo
+    s_data[threadIdx.x * temp + threadIdx.y + (STEP + 1) * blockDim.y] =  (img_h > (STEP + 1) * blockDim.y + idx_y) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
+
+    __syncthreads;
+
+    int sum;
+
+    #pragma unroll
+    for(int i = 1; i <= STEP; i++){
+
+        sum = 0;
+
+        #pragma unroll
+        for(int j = -kernelradius; j <= kernelradius; j++){
+            sum += c_kernel[j] * s_data[threadIdx.x * temp + i * blockDim.y + j];
+        }
+
+        d_output[i * blockDim.x * img_w] = sum;
+
+    }
 
 };
 
@@ -79,7 +123,7 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     // dimensions
     int temp = STEP * BLOCKDIM;
     dim3 dimBlock(BLOCKDIM, BLOCKDIM);
-    dim3 dimGrid_row((img_w + temp - 1)/temp, (img_h + BLOCKDIM - 1)/BLOCKDIM);
+    dim3 dimGrid_row(img_w/temp, img_h/BLOCKDIM);  // we padded the img
     // the 2 * halo is inside the 2 * BLOCKDIM - makes it easier to fill
     int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM) * sizeof(float);
 
@@ -92,7 +136,7 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     sdkStopTimer(&timer);
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
 
-    dim3 dimGrid_col((img_w + BLOCKDIM - 1)/BLOCKDIM, (img_h + temp - 1)/temp);
+    dim3 dimGrid_col(img_w/BLOCKDIM, img_h/temp);
     
     //col
     sdkResetTimer(&timer);
