@@ -45,7 +45,7 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
 
         #pragma unroll
         for(int j = -kernelradius; j <= kernelradius; j++){
-            sum += c_kernel[j] * s_data[threadIdx.y * temp + i * blockDim.x + j];
+            sum += c_kernel[kernelradius - j] * s_data[threadIdx.y * temp + i * blockDim.x + j];
         }
 
         d_output[i * blockDim.x] = sum;
@@ -76,7 +76,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     // there's an if-else but all the threads in warp evaluate to the same condition 
     // bcs it divisible by blocksize
     // left halo
-    s_data[threadIdx.x * temp + threadIdx.y] =  idx_y >= 0 ? d_input[0] : 0;
+    s_data[threadIdx.x * temp + threadIdx.y] = idx_y >= 0 ? d_input[0] : 0;
 
     // right halo
     s_data[threadIdx.x * temp + threadIdx.y + (STEP + 1) * blockDim.y] =  (img_h > (STEP + 1) * blockDim.y + idx_y) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
@@ -92,7 +92,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
 
         #pragma unroll
         for(int j = -kernelradius; j <= kernelradius; j++){
-            sum += c_kernel[j] * s_data[threadIdx.x * temp + i * blockDim.y + j];
+            sum += c_kernel[kernelradius - j] * s_data[threadIdx.x * temp + i * blockDim.y + j];
         }
 
         d_output[i * blockDim.x * img_w] = sum;
