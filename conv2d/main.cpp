@@ -33,8 +33,8 @@ int main(void){
     img.convertTo(img_float, CV_32FC1, 1.0/255.0);
 
     cv::Mat img_padded;
-    int row_rup = roundup_2power(img.rows, BLOCKDIM);
-    int col_rup = roundup_2power(img.cols, BLOCKDIM);
+    int row_rup = roundup_2power(img.rows, BLOCKDIM * STEP);
+    int col_rup = roundup_2power(img.cols, BLOCKDIM * STEP);
     cv::copyMakeBorder(img_float, 
                         img_padded, 
                         0, 
@@ -44,8 +44,8 @@ int main(void){
                         cv::BORDER_CONSTANT, 
                         cv::Scalar(0));
 
-    assert((img_padded.rows & (BLOCKDIM - 1)) == 0);
-    assert((img_padded.cols & (BLOCKDIM - 1)) == 0);
+    assert((img_padded.rows & (BLOCKDIM * STEP - 1)) == 0);
+    assert((img_padded.cols & (BLOCKDIM * STEP - 1)) == 0);
 
     // gaussian_kernel1D = gaussian_kernel1D conv dirac;
     cv::Mat dirac(cv::Size(1, KERNELRADIUS*2 + 1), CV_32FC1, cv::Scalar(0));
