@@ -5,11 +5,11 @@
 #include <cuda_profiler_api.h>
 #include "conv2dseparable_common.h"
 
-__constant__ float c_kernel[64 + 1];
+__constant__ float c_kernel[32 + 1];
 
 __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
-    
-    extern __shared__ float s_data[];
+    // the 2 * halo is inside the 2 * BLOCKDIM - makes it easier to fill
+    __shared__ float s_data[BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM)];
 
     int idx_x = blockIdx.x * blockDim.x * STEP + threadIdx.x - blockDim.x;
     int idx_y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -57,8 +57,8 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
 };
 
 __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
-
-    extern __shared__ float s_data[];
+    
+    __shared__ float s_data[BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM)];
 
     int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
     int idx_y = blockIdx.y * blockDim.y * STEP + threadIdx.y - blockDim.y;
@@ -67,22 +67,22 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     d_input += idx_y * img_w + idx_x;
     d_output += idx_y * img_w + idx_x;
 
-    int temp = (STEP + 2) * blockDim.y;
+    //int temp = (STEP + 2) * blockDim.y;
 
     // main data
     #pragma unroll
     for(int i = 1 ; i <= STEP; i++){
-        s_data[threadIdx.x * temp + threadIdx.y + i * blockDim.y] =  d_input[i * img_w * blockDim.y]; //read vertical - write horizontal
+        s_data[threadIdx.y * blockDim.x  + i * blockDim.y * blockDim.x + threadIdx.x] =  d_input[i * img_w * blockDim.y];
     }
 
 
     // there's an if-else but all the threads in warp evaluate to the same condition 
     // bcs it divisible by blocksize
-    // left halo
-    s_data[threadIdx.x * temp + threadIdx.y] = idx_y >= 0 ? d_input[0] : 0;
+    // up halo
+    s_data[threadIdx.y * blockDim.x + threadIdx.x] = idx_y >= 0 ? d_input[0] : 0;
 
-    // right halo
-    s_data[threadIdx.x * temp + threadIdx.y + (STEP + 1) * blockDim.y] =  (img_h > (STEP + 1) * blockDim.y + idx_y) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
+    // bot halo
+    s_data[threadIdx.y * blockDim.x  + (1 + STEP) * blockDim.y * blockDim.x + threadIdx.x] =  (img_h > (STEP + 1) * blockDim.y + idx_y) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
 
     //__syncthreads;
 
@@ -95,7 +95,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
 
         #pragma unroll
         for(int j = -kernelradius; j <= kernelradius; j++){
-            sum += c_kernel[kernelradius + j] * s_data[threadIdx.x * temp + i * blockDim.y + threadIdx.y + j];
+            sum += c_kernel[kernelradius + j] * s_data[threadIdx.y * blockDim.x  + i * blockDim.y * blockDim.x + threadIdx.x + j * blockDim.x];
         }
 
         d_output[i * blockDim.y * img_w] = sum;
@@ -127,20 +127,16 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     int temp = STEP * BLOCKDIM;
     dim3 dimBlock(BLOCKDIM, BLOCKDIM);
     dim3 dimGrid_row(img_w/temp, img_h/BLOCKDIM);  // we padded the img
-    // the 2 * halo is inside the 2 * BLOCKDIM - makes it easier to fill
-    int shared_mem_size = BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM) * sizeof(float);
-
-    //std::cout<< img_w/temp << " " << img_h/BLOCKDIM << " " << BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM);
 
     // where magic happens
     // row
     sdkStartTimer(&timer);
     cudaProfilerStart();
-    conv2d_row<<<dimGrid_row, dimBlock, shared_mem_size, 0>>>(d_input, d_intermediate_output, img_w, img_h, kernelradius);
+    conv2d_row<<<dimGrid_row, dimBlock>>>(d_input, d_intermediate_output, img_w, img_h, kernelradius);
     cudaProfilerStop();
     sdkStopTimer(&timer);
     checkCudaErrors(cudaGetLastError());
-    printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
+    printf("Processing Time: %.8f ms\n", sdkGetTimerValue(&timer));
 
     cudaDeviceSynchronize();
 
@@ -150,11 +146,11 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     sdkResetTimer(&timer);
     sdkStartTimer(&timer);
     cudaProfilerStart();
-    conv2d_col<<<dimGrid_col, dimBlock, shared_mem_size, 0>>>(d_intermediate_output, d_output, img_w, img_h, kernelradius);
+    conv2d_col<<<dimGrid_col, dimBlock>>>(d_intermediate_output, d_output, img_w, img_h, kernelradius);
     cudaProfilerStop();
     sdkStopTimer(&timer);
     checkCudaErrors(cudaGetLastError());
-    printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
+    printf("Processing Time: %.8f ms\n", sdkGetTimerValue(&timer));
     
     cudaDeviceSynchronize();
 

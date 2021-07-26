@@ -1,0 +1,1 @@
+profiler tells to use concurrent kernels to hide some memcpy latency - use streams // latency problems - others?
