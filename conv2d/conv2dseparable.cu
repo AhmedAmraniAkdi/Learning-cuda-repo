@@ -142,6 +142,8 @@ void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int
     checkCudaErrors(cudaGetLastError());
     printf("Processing Time: %.2f ms\n", sdkGetTimerValue(&timer));
 
+    cudaDeviceSynchronize();
+
     dim3 dimGrid_col(img_w/BLOCKDIM, img_h/temp);
     
     //col
