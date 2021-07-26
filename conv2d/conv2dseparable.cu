@@ -58,7 +58,8 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
 
 __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h, int kernelradius){
     
-    __shared__ float s_data[BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM)];
+    //__shared__ float s_data[BLOCKDIM * (BLOCKDIM * STEP + 2 * BLOCKDIM)];
+    __shared__ float s_data[(BLOCKDIM * STEP + 2 * BLOCKDIM)][BLOCKDIM];
 
     int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
     int idx_y = blockIdx.y * blockDim.y * STEP + threadIdx.y - blockDim.y;
@@ -72,17 +73,17 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     // main data
     #pragma unroll
     for(int i = 1 ; i <= STEP; i++){
-        s_data[threadIdx.y * blockDim.x  + i * blockDim.y * blockDim.x + threadIdx.x] =  d_input[i * img_w * blockDim.y];
+        s_data[threadIdx.y + i * blockDim.y][threadIdx.x] =  d_input[i * img_w * blockDim.y];
     }
 
 
     // there's an if-else but all the threads in warp evaluate to the same condition 
     // bcs it divisible by blocksize
     // up halo
-    s_data[threadIdx.y * blockDim.x + threadIdx.x] = idx_y >= 0 ? d_input[0] : 0;
+    s_data[threadIdx.y][threadIdx.x] = idx_y >= 0 ? d_input[0] : 0;
 
     // bot halo
-    s_data[threadIdx.y * blockDim.x  + (1 + STEP) * blockDim.y * blockDim.x + threadIdx.x] =  (img_h > (STEP + 1) * blockDim.y + idx_y) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
+    s_data[threadIdx.y + (1 + STEP) * blockDim.y][threadIdx.x] =  (img_h > ((STEP + 1) * blockDim.y + idx_y)) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
 
     //__syncthreads;
 
@@ -95,16 +96,15 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
 
         #pragma unroll
         for(int j = -kernelradius; j <= kernelradius; j++){
-            sum += c_kernel[kernelradius + j] * s_data[threadIdx.y * blockDim.x  + i * blockDim.y * blockDim.x + threadIdx.x + j * blockDim.x];
+            sum += c_kernel[kernelradius + j] * s_data[threadIdx.y + i * blockDim.y + j][threadIdx.x];
         }
 
         d_output[i * blockDim.y * img_w] = sum;
 
     }
-
 };
 
-// add err checking
+
 void processing(float* h_input, float *h_output, float *h_kernel, int img_w, int img_h, int kernelradius){
     // variables for device
     float *d_input, *d_intermediate_output, *d_output;
