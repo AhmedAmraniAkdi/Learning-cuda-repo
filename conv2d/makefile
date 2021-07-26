@@ -37,5 +37,5 @@ conv2dseparable.obj:
 
 .PHONY: remove
 remove:
-	del *.obj *.exe 
+	del *.obj *.exe
 
