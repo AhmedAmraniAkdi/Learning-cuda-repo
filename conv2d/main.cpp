@@ -19,7 +19,6 @@ int main(void){
     std::cout<<"starting\n";
 
     std::string image_path = cv::samples::findFile("gray_apple.jpeg");
-
     cv::Mat img = cv::imread(image_path, cv::IMREAD_GRAYSCALE);
     
     if(img.empty())
@@ -48,11 +47,18 @@ int main(void){
     assert((img_padded.cols & (BLOCKDIM * STEP - 1)) == 0);
 
     // gaussian_kernel1D = gaussian_kernel1D conv dirac;
-    cv::Mat dirac(cv::Size(1, KERNELRADIUS*2 + 1), CV_32FC1, cv::Scalar(0));
-    dirac.at<float>(1, KERNELRADIUS) = 1;
+    cv::Mat dirac(cv::Size(1, KERNELRADIUS * 2 + 1), CV_32FC1, cv::Scalar(0));
+    dirac.at<float>(KERNELRADIUS) = 1;
     cv::Mat gaussian_kernel;
-    cv::GaussianBlur(dirac, gaussian_kernel, cv::Size(1, KERNELRADIUS*2 + 1), 15);
+    cv::GaussianBlur(dirac, gaussian_kernel, cv::Size(1, KERNELRADIUS * 2 + 1), 15);
+
+    std::cout<<dirac;
+    std::cout<<"\n"<<gaussian_kernel << "\n";/*
     
+    cv::Mat test;
+    cv::GaussianBlur(img_float, test, cv::Size(1, KERNELRADIUS*2 + 1), 15);
+    imshow("test", test);*/
+
     // variables for host
     float* h_input, *h_output, *h_kernel;
     int buf_size = img_padded.rows * img_padded.cols * sizeof(float);

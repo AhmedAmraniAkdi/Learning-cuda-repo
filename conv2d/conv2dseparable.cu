@@ -4,6 +4,7 @@
 #include <helper_cuda.h>
 #include <cuda_profiler_api.h>
 #include "conv2dseparable_common.h"
+#include <cooperative_groups.h>
 
 __constant__ float c_kernel[32 + 1];
 
@@ -13,6 +14,8 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
 
     int idx_x = blockIdx.x * blockDim.x * STEP + threadIdx.x - blockDim.x;
     int idx_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+    cooperative_groups::thread_block block = cooperative_groups::this_thread_block();
 
     // neat pointer arithmetic
     d_input += idx_y * img_w + idx_x;
@@ -35,6 +38,7 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
     s_data[threadIdx.y * temp + threadIdx.x + (STEP + 1) * blockDim.x] =  (img_w > ((STEP + 1) * blockDim.x + idx_x)) ? d_input[(STEP + 1 ) * blockDim.x] : 0;
 
     //__syncthreads;
+    block.sync();
 
     float sum;
 
@@ -64,6 +68,8 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     int idx_x = blockIdx.x * blockDim.x + threadIdx.x;
     int idx_y = blockIdx.y * blockDim.y * STEP + threadIdx.y - blockDim.y;
 
+    cooperative_groups::thread_block block = cooperative_groups::this_thread_block();
+
     // neat pointer arithmetic
     d_input += idx_y * img_w + idx_x;
     d_output += idx_y * img_w + idx_x;
@@ -87,6 +93,8 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
 
     //__syncthreads;
 
+    block.sync();
+
     float sum;
 
     #pragma unroll
@@ -96,6 +104,9 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
 
         #pragma unroll
         for(int j = -kernelradius; j <= kernelradius; j++){
+            /*if (threadIdx.x == 0 && blockIdx.x == 0 && threadIdx.y == 0 && blockIdx.y == 0) {
+                printf("%f %f %f\n", c_kernel[kernelradius + j], s_data[threadIdx.y + i * blockDim.y + j][threadIdx.x], sum);
+            }*/
             sum += c_kernel[kernelradius + j] * s_data[threadIdx.y + i * blockDim.y + j][threadIdx.x];
         }
 
