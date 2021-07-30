@@ -37,7 +37,7 @@ __global__ void conv2d_row(float *d_input, float *d_output, int img_w, int img_h
     // right halo
     s_data[threadIdx.y * temp + threadIdx.x + (STEP + 1) * blockDim.x] =  (img_w > ((STEP + 1) * blockDim.x + idx_x)) ? d_input[(STEP + 1 ) * blockDim.x] : 0;
 
-    //__syncthreads;
+    //__syncthreads();
     block.sync();
 
     float sum;
@@ -91,7 +91,7 @@ __global__ void conv2d_col(float *d_input, float *d_output, int img_w, int img_h
     // bot halo
     s_data[threadIdx.y + (1 + STEP) * blockDim.y][threadIdx.x] =  (img_h > ((STEP + 1) * blockDim.y + idx_y)) ? d_input[(STEP + 1 ) * blockDim.y * img_w] : 0;
 
-    //__syncthreads;
+    //__syncthreads();
 
     block.sync();
 
