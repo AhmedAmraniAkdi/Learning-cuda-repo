@@ -15,6 +15,10 @@ inclusive scan
 #include <helper_cuda.h>
 #include <chrono>
 
+#include <thrust/scan.h>
+#include <thrust/device_ptr.h>
+
+
 __global__ void reduce(float4 *d_input, float *d_output){
 
     __shared__ float s_data[BLOCKDIM * 2];//1 cell per thread + another blockdim for easier indx management
@@ -231,7 +235,33 @@ void scan(float4* d_input, float4* d_output, int arr_size){
 
     printf("total time GPU %.8fms\n", total_time);
 
+    float *temp_thrust;
+    float *temp_input_thrust = (float*) d_input;
+    cudaMalloc((void **)&temp_thrust, arr_size * sizeof(float));
+    thrust::device_ptr<float> dev_ptr = thrust::device_pointer_cast(temp_input_thrust);
+    thrust::device_ptr<float> dev_ptr_out = thrust::device_pointer_cast(temp_thrust);
+    cudaEventRecord(start, 0);
+    thrust::inclusive_scan(dev_ptr, dev_ptr + arr_size, dev_ptr_out);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsed_time, start, stop);
+    printf( "thrust scan: %.8f ms\n", elapsed_time);
+
+    float *h_thrust = (float*) malloc(arr_size * sizeof(float));
+    cudaMemcpy(h_thrust, temp_thrust, arr_size * sizeof(float), cudaMemcpyDeviceToHost);
+
+    std::cout<<"---------THRUST---------\n";
+    for(int i = 0; i < 20; i++){
+        std::cout<<h_thrust[i]<< " ";
+        if(((i%4) == 0) && i){
+            std::cout<<"\n";
+        }
+    }
+
+    cudaFree(temp_thrust);
     cudaFree(d_scan);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 }   
 
 
@@ -263,7 +293,7 @@ int check_solution(float4 *h_input, float4 *h_output, int arr_size){
 
     printf("total time CPU %.8fms\n", (std::chrono::duration_cast <std::chrono::milliseconds> (toc - tic)).count() * 1.0);
 
-    std::cout<<"------------------\n";
+    std::cout<<"---------CPU---------\n";
     for(int i = 0; i < 20; i++){
         std::cout<<temp[i]<< " ";
         if(((i%4) == 0) && i){
@@ -296,6 +326,10 @@ int main(void){
      
     fill_array(h_input, arr_size);
 
+    for(int i = 0; i < 5; i++){
+        std::cout<<h_input[i].x<<" "<<h_input[i].y<<" "<<h_input[i].z<<" "<<h_input[i].w<<"\n";
+    }
+
     cudaMalloc((void **)&d_input, arr_size * sizeof(float));
     cudaMalloc((void **)&d_output, arr_size * sizeof(float));
 
@@ -307,11 +341,7 @@ int main(void){
 
     cudaMemcpy(h_output, d_output, arr_size * sizeof(float), cudaMemcpyDeviceToHost);
 
-    for(int i = 0; i < 5; i++){
-        std::cout<<h_input[i].x<<" "<<h_input[i].y<<" "<<h_input[i].z<<" "<<h_input[i].w<<"\n";
-    }
-
-    std::cout<<"-----------------\n";
+    std::cout<<"--------GPU----------\n";
 
     for(int i = 0; i < 5; i++){
         std::cout<<h_output[i].x<<" "<<h_output[i].y<<" "<<h_output[i].z<<" "<<h_output[i].w<<"\n";
