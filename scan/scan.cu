@@ -13,27 +13,20 @@ inclusive scan
 #include <iostream>
 #include <stdlib.h>
 #include <helper_cuda.h>
-#include <cuda.h>
+#include <chrono>
 
 __global__ void reduce(float4 *d_input, float *d_output){
 
     __shared__ float s_data[BLOCKDIM * 2];//1 cell per thread + another blockdim for easier indx management
-
+    
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
-
-    /*if(threadIdx.x == 1 && blockIdx.x == 0){
-        printf("%f %f %f %f\n", d_input->w, d_input->x, d_input->y, d_input->z);
-    }*/
-
+    
     d_input += idx;
     d_output += blockIdx.x;
 
-    /*if(threadIdx.x == 1 && blockIdx.x == 0){
-        printf("%f %f %f %f\n", d_input->w, d_input->x, d_input->y, d_input->z);
-    }*/
     float4 item = *d_input;
     float sum = item.w + item.x + item.y + item.z;
-
+    
     s_data[threadIdx.x] = sum;
 
     __syncthreads();
@@ -122,7 +115,6 @@ __global__ void middle_scan(float *d_input, int iter_per_thread){
 
         if(threadIdx.x == 0){
             seed = s_data[BLOCKDIM - 1]; 
-            //printf("%f\n", seed);
         }
     }
 }
@@ -148,7 +140,7 @@ __global__ void lower_scan(float4 *d_input, float *d_scan, float4 *d_output){
     float *a = s_data;
 
     #pragma unroll
-    for(int d = LOG2_BLOCKDIM; d > 0; d--){
+    for(int d = LOG2_BLOCKDIM; d > 1; d--){
 
         if( threadIdx.x < (1 << (d - 1)) ){
             a[(1 << d) + threadIdx.x] = a[2 * threadIdx.x] + a[2 * threadIdx.x + 1];
@@ -182,10 +174,10 @@ __global__ void lower_scan(float4 *d_input, float *d_scan, float4 *d_output){
     __syncthreads();
     }
 
-    item.w += s_data[threadIdx.x];
-    item.x += item.w + s_data[threadIdx.x];
-    item.y += item.x + s_data[threadIdx.x];
-    item.z += item.y + s_data[threadIdx.x];
+    item.x += s_data[threadIdx.x];
+    item.y += item.x;
+    item.z += item.y;
+    item.w += item.z;
 
     d_output[idx] = item;
 }
@@ -197,20 +189,47 @@ void scan(float4* d_input, float4* d_output, int arr_size){
     dim3 dimBlock(BLOCKDIM);
     dim3 dimGrid(temp);
 
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    float total_time = 0;
+    float elapsed_time;
+
     float *d_scan;
     cudaMalloc((void **)&d_scan, temp * sizeof(float));
 
+
+    cudaEventRecord(start, 0);
     reduce<<<dimGrid, dimBlock>>>(d_input, d_scan);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsed_time, start, stop);
+    printf( "reduce: %.8f ms\n", elapsed_time);
+    total_time += elapsed_time;
 
+    cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan, temp/BLOCKDIM);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsed_time, start, stop);
+    printf( "middle scan: %.8f ms\n", elapsed_time);
+    total_time += elapsed_time;
 
+    cudaEventRecord(start, 0);
     lower_scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
-    cudaDeviceSynchronize();
+    //cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop);
+    cudaEventElapsedTime(&elapsed_time, start, stop);
+    printf( "final scan: %.8f ms\n", elapsed_time);
+    total_time += elapsed_time;
+
+    printf("total time GPU %.8fms\n", total_time);
 
     cudaFree(d_scan);
 }   
@@ -218,14 +237,9 @@ void scan(float4* d_input, float4* d_output, int arr_size){
 
 void fill_array(float4 *h_input, int arr_size){
 
-    //float *temp = (float*) h_input;
-    for(int i = 0; i < arr_size/4; i++){
-        //temp[i] = rand() & 15;
-        //temp[i] = 1;
-        h_input[i].w = 1;
-        h_input[i].x = 1;
-        h_input[i].y = 1;
-        h_input[i].z = 1;
+    float *temp = (float*) h_input;
+    for(int i = 0; i < arr_size; i++){
+        temp[i] = (float) rand() / RAND_MAX;
     }
 }
 
@@ -238,18 +252,32 @@ int check_solution(float4 *h_input, float4 *h_output, int arr_size){
 
     temp = (float*) malloc(arr_size * sizeof(float));
     
-    temp[0] = 0;
+    auto tic = std::chrono::high_resolution_clock::now();
+
+    temp[0] = h_input1[0];
     for(int i = 1; i < arr_size; i++){
-        temp[i] = temp[i - 1] + h_input1[i - 1];
+        temp[i] = temp[i - 1] + h_input1[i];
+    }
+
+    auto toc = std::chrono::high_resolution_clock::now();
+
+    printf("total time CPU %.8fms\n", (std::chrono::duration_cast <std::chrono::milliseconds> (toc - tic)).count() * 1.0);
+
+    std::cout<<"------------------\n";
+    for(int i = 0; i < 20; i++){
+        std::cout<<temp[i]<< " ";
+        if(((i%4) == 0) && i){
+            std::cout<<"\n";
+        }
     }
 
     int correct = 1;
-    for(int i = 0; i < arr_size; i++){
-        if(temp[i] != h_output1[i]){
+    /*for(int i = 0; i < arr_size; i++){
+        if(((temp[i] - h_output1[i]) * (temp[i] - h_output1[i])) > 0.00000001){
             correct = 0;
             break;
         }
-    }
+    }*/
 
     return correct;
 }
@@ -280,10 +308,16 @@ int main(void){
     cudaMemcpy(h_output, d_output, arr_size * sizeof(float), cudaMemcpyDeviceToHost);
 
     for(int i = 0; i < 5; i++){
-        std::cout<<h_output[i].w<<" "<<h_output[i].x<<" "<<h_output[i].y<<" "<<h_output[i].z<<" ";
+        std::cout<<h_input[i].x<<" "<<h_input[i].y<<" "<<h_input[i].z<<" "<<h_input[i].w<<"\n";
     }
 
-    //check_solution(h_input, h_output, arr_size) ?  std::cout<<"good" : std::cout<<"bad";
+    std::cout<<"-----------------\n";
+
+    for(int i = 0; i < 5; i++){
+        std::cout<<h_output[i].x<<" "<<h_output[i].y<<" "<<h_output[i].z<<" "<<h_output[i].w<<"\n";
+    }
+
+    check_solution(h_input, h_output, arr_size) ?  std::cout<<"\ngood" : std::cout<<"\nbad";
 
     cudaFree(d_input);
     cudaFree(d_output);
