@@ -66,10 +66,6 @@ __global__ void middle_scan(float *d_input, int iter_per_thread){
     __shared__ float s_data[BLOCKDIM * 2];
     
     float seed = 0;
-
-    if(threadIdx.x == 0){
-        seed = d_input[0];
-    }
      
     d_input += threadIdx.x;
 
@@ -80,7 +76,6 @@ __global__ void middle_scan(float *d_input, int iter_per_thread){
         s_data[threadIdx.x] = d_input[batch * iter_per_thread];
 
         __syncthreads();
-
 
         //upsweep
         float *a = s_data;
@@ -133,6 +128,69 @@ __global__ void middle_scan(float *d_input, int iter_per_thread){
 }
 
 
+__global__ void lower_scan(float4 *d_input, float *d_scan, float4 *d_output){
+
+    __shared__ float s_data[BLOCKDIM * 2]; //1 cell per thread + another blockdim for easier indx management
+
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    d_input += idx;
+
+    float4 item = *d_input;
+    float sum = item.w + item.x + item.y + item.z;
+
+    s_data[threadIdx.x] = sum;
+
+    __syncthreads();
+
+    // we reduce and put the result on the second half of shared memory
+
+    float *a = s_data;
+
+    #pragma unroll
+    for(int d = LOG2_BLOCKDIM; d > 0; d--){
+
+        if( threadIdx.x < (1 << (d - 1)) ){
+            a[(1 << d) + threadIdx.x] = a[2 * threadIdx.x] + a[2 * threadIdx.x + 1];
+        }
+
+        a = &a[(1 << d)];
+        __syncthreads();
+
+    }
+
+    if(threadIdx.x == 0){
+        a[1] = a[0];
+        a[0] = d_scan[blockIdx.x]; 
+    }
+    __syncthreads();
+
+
+    // downsweep
+    #pragma unroll
+    for(int d = 2; d <= LOG2_BLOCKDIM; d++){
+
+        a -= (1 << d);
+        
+        if( threadIdx.x < (1 << (d - 1)) ){
+
+            a[2 * threadIdx.x + 1] = a[2 * threadIdx.x] + a[(1 << d) + threadIdx.x];
+            a[2 * threadIdx.x] = a[(1 << d) + threadIdx.x];
+
+        }
+
+    __syncthreads();
+    }
+
+    item.w += s_data[threadIdx.x];
+    item.x += item.w + s_data[threadIdx.x];
+    item.y += item.x + s_data[threadIdx.x];
+    item.z += item.y + s_data[threadIdx.x];
+
+    d_output[idx] = item;
+}
+
+
 void scan(float4* d_input, float4* d_output, int arr_size){
 
     int temp = ((arr_size >> 2) + BLOCKDIM - 1)/BLOCKDIM; // each thread processes 1 float4
@@ -150,15 +208,9 @@ void scan(float4* d_input, float4* d_output, int arr_size){
     cudaDeviceSynchronize();
     checkCudaErrors(cudaGetLastError());
 
-    float *h_output = (float*) malloc(temp * sizeof(float));
-    cudaMemcpy(h_output, d_scan, temp * sizeof(float), cudaMemcpyDeviceToHost);
-
-    std::cout << temp << "\n";
-    std::cout << temp/BLOCKDIM << "\n";
-
-    for(int i = 0; i < 5; i++){
-        std::cout << h_output[i] << " ";
-    }
+    lower_scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
+    cudaDeviceSynchronize();
+    checkCudaErrors(cudaGetLastError());
 
     cudaFree(d_scan);
 }   
@@ -171,9 +223,9 @@ void fill_array(float4 *h_input, int arr_size){
         //temp[i] = rand() & 15;
         //temp[i] = 1;
         h_input[i].w = 1;
-        h_input[i].x = 2;
-        h_input[i].y = 3;
-        h_input[i].z = 4;
+        h_input[i].x = 1;
+        h_input[i].y = 1;
+        h_input[i].z = 1;
     }
 }
 
@@ -207,24 +259,36 @@ int main(void){
 
     srand(0);
 
-
-    float4 *h_input;
-    float4 *d_input;
+    float4 *h_input, *h_output;
+    float4 *d_input, *d_output;
     int arr_size = 1 << 25;
 
     h_input = (float4*) malloc(arr_size * sizeof(float));
-
+    h_output = (float4*) malloc(arr_size * sizeof(float));
+     
     fill_array(h_input, arr_size);
 
     cudaMalloc((void **)&d_input, arr_size * sizeof(float));
+    cudaMalloc((void **)&d_output, arr_size * sizeof(float));
+
     cudaMemcpy(d_input, h_input, arr_size * sizeof(float), cudaMemcpyHostToDevice);
 
-    scan(d_input, NULL, arr_size);
+    scan(d_input, d_output, arr_size);
 
     cudaDeviceSynchronize();
 
+    cudaMemcpy(h_output, d_output, arr_size * sizeof(float), cudaMemcpyDeviceToHost);
+
+    for(int i = 0; i < 5; i++){
+        std::cout<<h_output[i].w<<" "<<h_output[i].x<<" "<<h_output[i].y<<" "<<h_output[i].z<<" ";
+    }
+
+    //check_solution(h_input, h_output, arr_size) ?  std::cout<<"good" : std::cout<<"bad";
+
     cudaFree(d_input);
+    cudaFree(d_output);
     free(h_input);
+    free(h_output);
 
     return 0;
 }
