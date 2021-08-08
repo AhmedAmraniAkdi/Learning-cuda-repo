@@ -19,5 +19,5 @@ split:
 
 .PHONY: remove
 remove:
-	del *.exe
+	del *.exe *.obj *.lib *.exp
 
