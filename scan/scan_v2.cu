@@ -18,9 +18,10 @@
 #define BLOCKSIZE 512
 #define LOG2_BLOCKSIZE 9
 #define LOG2_STEPSBEFOREWARPSIZE (LOG2_BLOCKSIZE - 5)
-#define REDUCTION_STEPS 4 // each block thread loads 4 float4, 256B
+#define REDUCTION_STEPS 2 // each thread thread loads 2 float4, 128B
 #define SCAN_STEPS 2 // each block thread loads 2 float4, 128B
 #define SCAN_SMEM_WIDTH (BLOCKSIZE/32)
+#define MIDDLE_SCAN_STEP 16 // 2^(25 - 3 - 9 - 9) // -3 (2 float4 loads) - 9 (blocksize) - 9 (each thread of middle scan block)
 
 
 // SIMT Kogge-Stone scan kernel
@@ -151,7 +152,42 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 }
 
 // two level reduce then scan - middle scan kernel
+__global__ void middle_scan(float *seeds){
 
+    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1 + 1]; // 1 for no bank conflict and another one for the result of the warp scan
 
+    float seed = 0;
+    seeds += threadIdx.x;
+    
+    // cyclically scan the reduced sums
+    #pragma unroll
+    for(int i = 0; i < MIDDLE_SCAN_STEP; i++){
+        s_data[threadIdx.x & 31][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] = seeds[i * BLOCKSIZE];
+
+        if(threadIdx.x == 0){
+            s_data[threadIdx.x & 31][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] += seed;
+        }
+
+        __syncthreads();
+
+        if((threadIdx.x >> 5) == 0){
+            #pragma unroll
+            for(int j = 1; j < SCAN_SMEM_WIDTH; j++){
+                s_data[threadIdx.x][j] += s_data[threadIdx.x][j - 1];
+            }
+
+            scan_warp_merrill_srts(s_data);
+        }
+
+        if(threadIdx.x == 0){
+            seed = s_data[31][SCAN_SMEM_WIDTH + 1];
+        }
+
+        __syncthreads();
+
+        seeds[i * BLOCKSIZE] = s_data[threadIdx.x & 31][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] + s_data[32 * i + threadIdx.x & 31][SCAN_SMEM_WIDTH + 1];
+    }
+
+}
 
 // main
