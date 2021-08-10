@@ -18,7 +18,7 @@
 #define BLOCKSIZE 512
 #define LOG2_BLOCKSIZE 9
 #define REDUCTION_STEPS 2 // each thread thread loads 2 float4, 128B
-#define SCAN_STEPS 2 // each block thread loads 2 float4, 128B
+#define SCAN_STEPS REDUCTION_STEPS // each block thread loads 2 float4, 128B
 #define SCAN_SMEM_WIDTH (BLOCKSIZE/32)
 #define LOG2_SCAN_SMEM_WIDTH 4
 #define MIDDLE_SCAN_STEP 16 // 2^(25 - 3 - 9 - 9) // -3 (2 float4 loads) - 9 (blocksize) - 9 (each thread of middle scan block)
@@ -116,19 +116,23 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
     int idx = blockDim.x * blockIdx.x * SCAN_STEPS + threadIdx.x;
 
     d_input += idx;
-    float seed = seeds[blockIdx.x];
+    d_output += idx;
 
-    printf("hello0 %d %d\n", threadIdx.x, blockIdx.x);
+    int row = threadIdx.x >> LOG2_SCAN_SMEM_WIDTH;
+    int col = threadIdx.x & (SCAN_SMEM_WIDTH - 1);
 
     float4 item[SCAN_STEPS];
 
     #pragma unroll
     for(int i = 0; i < SCAN_STEPS; i++){
         item[i] = d_input[i * BLOCKSIZE];
-        item[i].y += item[i].x + seed;
+        if(threadIdx.x == 0 && i==0 && blockIdx.x > 0){
+            item[i].x += seeds[blockIdx.x - 1];
+        }
+        item[i].y += item[i].x;
         item[i].z += item[i].y;
         item[i].w += item[i].z;
-        s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] = item[i].w;
+        s_data[32 * i + row][col] = item[i].w;
     }
 
     __syncthreads();
@@ -152,17 +156,17 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
     for(int i = 0; i < SCAN_STEPS; i++){
         // sum last column of simt scan
         if(threadIdx.x >= SCAN_SMEM_WIDTH){
-            item[i].x += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH) - 1][SCAN_SMEM_WIDTH];
-            item[i].y += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH) - 1][SCAN_SMEM_WIDTH];
-            item[i].z += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH) - 1][SCAN_SMEM_WIDTH];
-            item[i].w += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH) - 1][SCAN_SMEM_WIDTH];
+            item[i].x += s_data[32 * i + row - 1][SCAN_SMEM_WIDTH];
+            item[i].y += s_data[32 * i + row - 1][SCAN_SMEM_WIDTH];
+            item[i].z += s_data[32 * i + row - 1][SCAN_SMEM_WIDTH];
+            item[i].w += s_data[32 * i + row - 1][SCAN_SMEM_WIDTH];
         }
         // sum element before in row, serial scan
         if(threadIdx.x > 0){
-            item[i].x += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1) - 1];
-            item[i].y += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1) - 1];
-            item[i].z += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1) - 1];
-            item[i].w += s_data[32 * i + (threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1) - 1];
+            item[i].x += s_data[32 * i + row][col - 1];
+            item[i].y += s_data[32 * i + row][col - 1];
+            item[i].z += s_data[32 * i + row][col - 1];
+            item[i].w += s_data[32 * i + row][col - 1];
         }
         // sum last element of previous simt scan
         if(i > 0){
@@ -171,7 +175,7 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
             item[i].z += s_data[32 * (i - 1) + 31][SCAN_SMEM_WIDTH];
             item[i].w += s_data[32 * (i - 1) + 31][SCAN_SMEM_WIDTH];
         }
-        d_output[idx + i * BLOCKSIZE] = item[i];
+        d_output[i * BLOCKSIZE] = item[i];
     }
 
 }
@@ -270,7 +274,7 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     for(int i=510; i < 515; i++)
         std::cout<<h_scan[i]<<"\n";*/
 
-    /*cudaEventRecord(start, 0);
+    cudaEventRecord(start, 0);
     scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
@@ -279,7 +283,7 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "final scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    printf("total time GPU %.8fms\n", total_time);*/
+    printf("total time GPU %.8fms\n", total_time);
 
     cudaFree(d_scan);
     cudaEventDestroy(start);
@@ -320,13 +324,13 @@ int main(void){
 
     cuda_interface_scan(d_input, d_output);
 
-    /*cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
     std::cout<<"--------GPU----------\n";
 
     for(int i = 0; i < 5; i++){
         std::cout<<h_output[i].x<<" "<<h_output[i].y<<" "<<h_output[i].z<<" "<<h_output[i].w<<"\n";
-    }*/
+    }
 
     cudaFree(d_input);
     cudaFree(d_output);
