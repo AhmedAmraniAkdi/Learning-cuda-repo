@@ -17,7 +17,6 @@
 #define ARR_SIZE (1 << 25)
 #define BLOCKSIZE 512
 #define LOG2_BLOCKSIZE 9
-#define LOG2_STEPSBEFOREWARPSIZE (LOG2_BLOCKSIZE - 5)
 #define REDUCTION_STEPS 2 // each thread thread loads 2 float4, 128B
 #define SCAN_STEPS 2 // each block thread loads 2 float4, 128B
 #define SCAN_SMEM_WIDTH (BLOCKSIZE/32)
@@ -30,7 +29,7 @@
 #include <helper_cuda.h>
 
 // SIMT Kogge-Stone scan kernel
-__device__ __inline__ void scan_warp(float* input, int indx = threadIdx.x){
+__device__ __inline__ void scan_warp(volatile float* input, int indx = threadIdx.x){
     int lane = indx & 31;
     
     if (lane >= 1)  input[indx] = input[indx - 1] + input[indx];
@@ -51,7 +50,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
 
     __shared__ float s_data[BLOCKSIZE * 2];//1 cell per thread + another blockdim for easier indx management - will have 2 way bank conflicts though
     
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int idx = blockDim.x * blockIdx.x * REDUCTION_STEPS + threadIdx.x;
     
     d_input += idx;
     d_output += blockIdx.x;
@@ -64,7 +63,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
         item = d_input[i * BLOCKSIZE];
         sum += item.w + item.x + item.y + item.z;
     }
-    
+
     s_data[threadIdx.x] = sum;
 
     __syncthreads();
@@ -74,8 +73,8 @@ __global__ void reduce(float4 *d_input, float *d_output){
     float *a = s_data;
 
     #pragma unroll
-    for(int d = LOG2_BLOCKSIZE; d > LOG2_STEPSBEFOREWARPSIZE; d--){ // 9 -> 5
-
+    for(int d = LOG2_BLOCKSIZE; d > 5; d--){ // 9 -> 5
+        
         if( threadIdx.x < (1 << (d - 1)) ){
             a[(1 << d) + threadIdx.x] = a[2 * threadIdx.x] + a[2 * threadIdx.x + 1];
         }
@@ -93,6 +92,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
     if(threadIdx.x == 31){
         d_output[0] = a[31];
     }
+
 }
 
 // the only change is how smem is handled after the serial scan
@@ -111,10 +111,12 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
     __shared__ float s_data[32 * SCAN_STEPS][SCAN_SMEM_WIDTH + 1 + 1]; // 1 for no bank conflict and another one for the result of the warp scan
 
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    int idx = blockDim.x * blockIdx.x * SCAN_STEPS + threadIdx.x;
 
     d_input += idx;
     float seed = seeds[blockIdx.x];
+
+    printf("hello0 %d %d\n", threadIdx.x, blockIdx.x);
 
     float4 item[SCAN_STEPS];
 
@@ -212,14 +214,13 @@ __global__ void middle_scan(float *seeds){
             seeds[i * BLOCKSIZE] = s_data[(threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1)];
         }
     }
-
 }
 
 // main + interface
 
 void cuda_interface_scan(float4* d_input, float4* d_output){
 
-    int temp = ((ARR_SIZE >> 3) + BLOCKSIZE - 1)/BLOCKSIZE; // each thread processes 2 float4
+    int temp = (ARR_SIZE >> 3)/BLOCKSIZE; // each thread processes 2 float4
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid(temp);
 
@@ -232,7 +233,6 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     float *d_scan;
     cudaMalloc((void **)&d_scan, temp * sizeof(float));
 
-
     cudaEventRecord(start, 0);
     reduce<<<dimGrid, dimBlock>>>(d_input, d_scan);
     checkCudaErrors(cudaGetLastError());
@@ -242,7 +242,11 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "reduce: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    cudaEventRecord(start, 0);
+    float *h_scan = (float*)malloc(temp * sizeof(float));
+    cudaMemcpy(h_scan, d_scan,  temp * sizeof(float), cudaMemcpyDeviceToHost);
+    std::cout<<h_scan[0]<<"\n";
+
+    /*cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
@@ -260,7 +264,7 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "final scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    printf("total time GPU %.8fms\n", total_time);
+    printf("total time GPU %.8fms\n", total_time);*/
 
     cudaFree(d_scan);
     cudaEventDestroy(start);
@@ -292,20 +296,28 @@ int main(void){
         std::cout<<h_input[i].x<<" "<<h_input[i].y<<" "<<h_input[i].z<<" "<<h_input[i].w<<"\n";
     }
 
-    cudaMalloc((void **)&d_input,   ARR_SIZE * sizeof(float));
-    cudaMalloc((void **)&d_output,  ARR_SIZE * sizeof(float));
+    float sum = 0;
+  
+    for(int i = 0; i < BLOCKSIZE * 2; i++){
+        sum += h_input[i].x + h_input[i].y + h_input[i].z + h_input[i].w;
+    }
+
+    std::cout<<"sum first block "<< sum <<"\n";
+
+    cudaMalloc((void **)&d_input, ARR_SIZE * sizeof(float));
+    cudaMalloc((void **)&d_output, ARR_SIZE * sizeof(float));
 
     cudaMemcpy(d_input, h_input, ARR_SIZE * sizeof(float), cudaMemcpyHostToDevice);
 
     cuda_interface_scan(d_input, d_output);
 
-    cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
+    /*cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
     std::cout<<"--------GPU----------\n";
 
     for(int i = 0; i < 5; i++){
         std::cout<<h_output[i].x<<" "<<h_output[i].y<<" "<<h_output[i].z<<" "<<h_output[i].w<<"\n";
-    }
+    }*/
 
     cudaFree(d_input);
     cudaFree(d_output);
