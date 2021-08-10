@@ -20,6 +20,7 @@
 #define REDUCTION_STEPS 2 // each thread thread loads 2 float4, 128B
 #define SCAN_STEPS 2 // each block thread loads 2 float4, 128B
 #define SCAN_SMEM_WIDTH (BLOCKSIZE/32)
+#define LOG2_SCAN_SMEM_WIDTH 4
 #define MIDDLE_SCAN_STEP 16 // 2^(25 - 3 - 9 - 9) // -3 (2 float4 loads) - 9 (blocksize) - 9 (each thread of middle scan block)
 
 
@@ -96,14 +97,15 @@ __global__ void reduce(float4 *d_input, float *d_output){
 }
 
 // the only change is how smem is handled after the serial scan
-__device__ __inline__ void scan_warp_merrill_srts(float s_data[32 * SCAN_STEPS][SCAN_SMEM_WIDTH + 1 + 1], int indx = threadIdx.x){
+__device__ __inline__ void scan_warp_merrill_srts(volatile float (*s_data)[SCAN_SMEM_WIDTH + 1 + 1], int indx = threadIdx.x){
     int lane = indx & 31;
-    
+
     if (lane >= 1)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 1][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
     if (lane >= 2)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 2][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
     if (lane >= 4)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 4][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
     if (lane >= 8)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 8][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
     if (lane >= 16) s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 16][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
+
 }
 
 // merrill_srts scan kernel
@@ -179,19 +181,23 @@ __global__ void middle_scan(float *seeds){
 
     __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1 + 1]; // 1 for no bank conflict and another one for the result of the warp scan
 
+    int row = threadIdx.x >> LOG2_SCAN_SMEM_WIDTH;
+    int col = threadIdx.x & (SCAN_SMEM_WIDTH - 1);
+    
     float seed = 0;
     seeds += threadIdx.x;
     
     // cyclically scan the reduced sums
     #pragma unroll
     for(int i = 0; i < MIDDLE_SCAN_STEP; i++){
-        s_data[(threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] = seeds[i * BLOCKSIZE];
+        s_data[row][col] = seeds[i * BLOCKSIZE];
 
         if(threadIdx.x == 0){
-            s_data[(threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] += seed;
+            s_data[0][0] += seed;
         }
 
         __syncthreads();
+
 
         if((threadIdx.x >> 5) == 0){
             #pragma unroll
@@ -199,19 +205,21 @@ __global__ void middle_scan(float *seeds){
                 s_data[threadIdx.x][j] += s_data[threadIdx.x][j - 1];
             }
 
+            __syncthreads();
+
             scan_warp_merrill_srts(s_data);
         }
 
         if(threadIdx.x == 0){
-            seed = s_data[31][SCAN_SMEM_WIDTH + 1];
+            seed = s_data[31][SCAN_SMEM_WIDTH];
         }
 
         __syncthreads();
 
         if(threadIdx.x >= SCAN_SMEM_WIDTH){
-            seeds[i * BLOCKSIZE] = s_data[(threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1)] + s_data[(threadIdx.x >> SCAN_SMEM_WIDTH) - 1][SCAN_SMEM_WIDTH];
+            seeds[i * BLOCKSIZE] = s_data[row][col] + s_data[row - 1][SCAN_SMEM_WIDTH];
         } else {
-            seeds[i * BLOCKSIZE] = s_data[(threadIdx.x >> SCAN_SMEM_WIDTH)][threadIdx.x & (SCAN_SMEM_WIDTH - 1)];
+            seeds[i * BLOCKSIZE] = s_data[0][threadIdx.x];
         }
     }
 }
@@ -242,11 +250,13 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "reduce: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
+    /*std::cout<<"------------------\n";
     float *h_scan = (float*)malloc(temp * sizeof(float));
     cudaMemcpy(h_scan, d_scan,  temp * sizeof(float), cudaMemcpyDeviceToHost);
-    std::cout<<h_scan[0]<<"\n";
+    for(int i=510; i < 515; i++)
+        std::cout<<h_scan[i]<<"\n";*/
 
-    /*cudaEventRecord(start, 0);
+    cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
@@ -255,7 +265,12 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "middle scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    cudaEventRecord(start, 0);
+    /*std::cout<<"--------------------------middle scan\n";
+    cudaMemcpy(h_scan, d_scan,  temp * sizeof(float), cudaMemcpyDeviceToHost);
+    for(int i=510; i < 515; i++)
+        std::cout<<h_scan[i]<<"\n";*/
+
+    /*cudaEventRecord(start, 0);
     scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
@@ -296,13 +311,7 @@ int main(void){
         std::cout<<h_input[i].x<<" "<<h_input[i].y<<" "<<h_input[i].z<<" "<<h_input[i].w<<"\n";
     }
 
-    float sum = 0;
-  
-    for(int i = 0; i < BLOCKSIZE * 2; i++){
-        sum += h_input[i].x + h_input[i].y + h_input[i].z + h_input[i].w;
-    }
-
-    std::cout<<"sum first block "<< sum <<"\n";
+    std::cout<<"----------------------\n";
 
     cudaMalloc((void **)&d_input, ARR_SIZE * sizeof(float));
     cudaMalloc((void **)&d_output, ARR_SIZE * sizeof(float));
