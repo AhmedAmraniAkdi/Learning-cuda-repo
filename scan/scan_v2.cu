@@ -112,7 +112,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
 __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
     __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1];
-    int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD+ threadIdx.x;
+    int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
 
     d_input += idx;
     d_output += idx;
@@ -137,7 +137,6 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
         s_data[row][col] = item.w;
 
         __syncthreads();
-
         // serial reduce
         if((threadIdx.x >> 5) == 0){
             #pragma unroll
@@ -151,11 +150,11 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
         // add the SIMT scan seeds
         // sum last column of simt scan
-        if(threadIdx.x >= SCAN_SMEM_WIDTH){
+        if(row > 0){
             item += s_data[row - 1][SCAN_SMEM_WIDTH];
         }
         // sum element before in row, serial scan
-        if(threadIdx.x > 0){
+        if(col > 0){
             item += s_data[row][col - 1];
         }
 
@@ -163,9 +162,8 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
             seed = s_data[31][SCAN_SMEM_WIDTH];
         }
 
-        d_output[0] = item;
-
         __syncthreads();
+        d_output[i * BLOCKSIZE] = item;
     }
 }
 
@@ -239,11 +237,9 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
-    cudaDeviceSynchronize();
     cudaEventElapsedTime(&elapsed_time, start, stop);
     printf( "middle scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
-
 
     cudaEventRecord(start, 0);
     scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
