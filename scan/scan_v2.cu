@@ -50,20 +50,19 @@
 // the only change is how smem is handled after the serial scan
 __device__ __inline__ void scan_warp_merrill_srts(volatile float (*s_data)[SCAN_SMEM_WIDTH + 1], int indx = threadIdx.x){
     int lane = indx & 31;
-
-    if (lane >= 1)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 1][SCAN_SMEM_WIDTH - 1] + s_data[indx][SCAN_SMEM_WIDTH - 1];
-    if (lane >= 2)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 2][SCAN_SMEM_WIDTH - 1] + s_data[indx][SCAN_SMEM_WIDTH - 1];
-    if (lane >= 4)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 4][SCAN_SMEM_WIDTH - 1] + s_data[indx][SCAN_SMEM_WIDTH - 1];
-    if (lane >= 8)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 8][SCAN_SMEM_WIDTH - 1] + s_data[indx][SCAN_SMEM_WIDTH - 1];
-    if (lane >= 16) s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 16][SCAN_SMEM_WIDTH - 1] + s_data[indx][SCAN_SMEM_WIDTH - 1];
+    s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx][SCAN_SMEM_WIDTH - 1]; // in last column we doing the sums
+    if (lane >= 1)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 1][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
+    if (lane >= 2)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 2][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
+    if (lane >= 4)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 4][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
+    if (lane >= 8)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 8][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
+    if (lane >= 16) s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 16][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
 
 }
 
 // merrill_srts reduce kernel
 __global__ void reduce(float4 *d_input, float *d_output){
 
-    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; // 1 for the result of the warp scan
-
+    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; // + 1 padding, python script
     int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
 
     d_input += idx;
@@ -74,12 +73,15 @@ __global__ void reduce(float4 *d_input, float *d_output){
 
     float4 item;
     float sum = 0;
-    float total_sum = 0;
+    float seed = 0;
 
     #pragma unroll
     for(int i = 0; i < WORK_PER_THREAD; i++){
         item = d_input[i * BLOCKSIZE];
-        sum += item.x + item.y + item.z + item.w;
+        sum = item.x + item.y + item.z + item.w;
+        if(threadIdx.x == 0){
+            sum += seed;
+        }
 
         s_data[row][col] = sum;
         __syncthreads();
@@ -94,23 +96,22 @@ __global__ void reduce(float4 *d_input, float *d_output){
 
         // after simt scan we work on first warp, so no need for sync
         if(threadIdx.x == 0){
-            total_sum += s_data[31][SCAN_SMEM_WIDTH]; // total sum is at this cell
+            seed = s_data[31][SCAN_SMEM_WIDTH]; // total sum is at this cell
         }
 
-    }
+        __syncthreads();
+        
+    }   
 
     if(threadIdx.x == 0){
-        d_output[0] = total_sum;
-    }
-
-    
+        d_output[0] = s_data[31][SCAN_SMEM_WIDTH];
+    }    
 }
 
 // merrill_srts scan kernel
 __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
-    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; // 1 for no bank conflict and another one for the result of the warp scan
-
+    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1];
     int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD+ threadIdx.x;
 
     d_input += idx;
@@ -171,8 +172,7 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 // two level reduce then scan - middle scan kernel
 __global__ void middle_scan(float *seeds){
 
-    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; // 1 for no bank conflict and another one for the result of the warp scan
-
+    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; 
     int row = threadIdx.x >> LOG2_SCAN_SMEM_WIDTH;
     int col = threadIdx.x & (SCAN_SMEM_WIDTH - 1);
     
@@ -191,9 +191,6 @@ __global__ void middle_scan(float *seeds){
             for(int j = 1; j < SCAN_SMEM_WIDTH; j++){
                 s_data[threadIdx.x][j] += s_data[threadIdx.x][j - 1];
             }
-
-            __syncthreads();
-
             scan_warp_merrill_srts(s_data);
         }
 
@@ -214,7 +211,7 @@ __global__ void middle_scan(float *seeds){
 // main + interface
 void cuda_interface_scan(float4* d_input, float4* d_output){
 
-    int temp = (ARR_SIZE >> LOG2_WORK_PER_THREAD)/BLOCKSIZE; // each thread processes 8 float4
+    int temp = ARR_SIZE >> (LOG2_WORK_PER_THREAD + LOG2_BLOCKSIZE); // each thread processes 8 float4
     dim3 dimBlock(BLOCKSIZE);
     dim3 dimGrid(temp);
 
@@ -235,26 +232,18 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     cudaEventElapsedTime(&elapsed_time, start, stop);
     printf( "reduce: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
-
-    /*std::cout<<"------------------\n";
-    float *h_scan = (float*)malloc(temp * sizeof(float));
-    cudaMemcpy(h_scan, d_scan,  temp * sizeof(float), cudaMemcpyDeviceToHost);
-    for(int i=510; i < 515; i++)
-        std::cout<<h_scan[i]<<"\n";*/
+    
 
     cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
+    cudaDeviceSynchronize();
     cudaEventElapsedTime(&elapsed_time, start, stop);
     printf( "middle scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    /*std::cout<<"--------------------------middle scan\n";
-    cudaMemcpy(h_scan, d_scan,  temp * sizeof(float), cudaMemcpyDeviceToHost);
-    for(int i=510; i < 515; i++)
-        std::cout<<h_scan[i]<<"\n";*/
 
     cudaEventRecord(start, 0);
     scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
@@ -272,7 +261,6 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     cudaEventDestroy(stop);
 }   
 
-
 void fill_array(float4 *h_input){
 
     float *temp = (float*) h_input;
@@ -280,7 +268,6 @@ void fill_array(float4 *h_input){
         temp[i] = (float) rand() / RAND_MAX;
     }
 }
-
 
 void check(float4 *h_input, float4 *h_output){
     float *temp1 = (float*) h_input;
@@ -301,8 +288,6 @@ void check(float4 *h_input, float4 *h_output){
 
     free(temp3);
 }
-
-
 
 int main(void){
 
