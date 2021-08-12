@@ -23,15 +23,18 @@
 #define WORK_PER_THREAD 8 // 8 float4 each thread on scanning and reducing
 #define LOG2_WORK_PER_THREAD 5 // 32 elements (8 float4)
 #define MIDDLE_SCAN_STEP 64 // 2^(25 - 5 - 7 - 7) // -5 (8 float4 loads) - 7 (blocksize) - 7 (each thread of middle scan block)
+#define PADDING 0
+#define SMEM_TOTAL_WIDTH (SCAN_SMEM_WIDTH + 1 + PADDING)
+
 
 #include <cuda_runtime.h>
 #include <iostream>
 #include <stdlib.h>
 #include <helper_cuda.h>
 #include <helper_math.h>
-
+/*
 // SIMT Kogge-Stone scan kernel
-/*__device__ __inline__ void scan_warp(volatile float* input, int indx = threadIdx.x){
+__device__ __inline__ void scan_warp(volatile float* input, int indx = threadIdx.x){
     int lane = indx & 31;
     
     if (lane >= 1)  input[indx] = input[indx - 1] + input[indx];
@@ -39,16 +42,61 @@
     if (lane >= 4)  input[indx] = input[indx - 4] + input[indx];
     if (lane >= 8)  input[indx] = input[indx - 8] + input[indx];
     if (lane >= 16) input[indx] = input[indx - 16] + input[indx];
-}*/
-
+}
 // SIMT Brent-Kung scan kernel - same as the merrill_srts reduction kernel but since it's the same as the warp size -> no need for __syncthreads()
 // BUT BUT!!!!! since this is SIMT -> there is actually 0 gain from reducing the number of operations , so the scan-warp will be used.
-/*__device__ __inline__ void reduce_warp(float* input, int indx = threadIdx.x){
-    scan_warp(input, indx);
+
+// merrill tree reduce
+__global__ void reduce1(float4 *d_input, float *d_output){
+
+    __shared__ float s_data[BLOCKSIZE * 2];//1 cell per thread + another blockdim for easier indx management
+    
+    int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
+    
+    d_input += idx;
+    d_output += blockIdx.x;
+    float4 item;
+    float sum = 0;
+
+    #pragma unroll
+    for(int i = 0; i < WORK_PER_THREAD; i++){
+        item = d_input[i * BLOCKSIZE];
+        sum += item.w + item.x + item.y + item.z;
+    }
+
+    s_data[threadIdx.x] = sum;
+
+    __syncthreads();
+
+    // we reduce and put the result on the second half of shared memory
+
+    float *a = s_data;
+
+    #pragma unroll
+    for(int d = LOG2_BLOCKSIZE; d > 5; d--){
+
+        if( threadIdx.x < (1 << (d - 1)) ){
+            a[(1 << d) + threadIdx.x] = a[2 * threadIdx.x] + a[2 * threadIdx.x + 1];
+        }
+
+        a = &a[(1 << d)];
+        __syncthreads();
+
+    }
+
+    if((threadIdx.x >> 5) == 0){
+        scan_warp(s_data);
+    }
+
+    // output the sum
+    if(threadIdx.x == 0){
+        d_output[0] = a[31];
+    }
 }*/
 
+
 // the only change is how smem is handled after the serial scan
-__device__ __inline__ void scan_warp_merrill_srts(volatile float (*s_data)[SCAN_SMEM_WIDTH + 1], int indx = threadIdx.x){
+__device__ __inline__ void scan_warp_merrill_srts(volatile float (*s_data)[SMEM_TOTAL_WIDTH], int indx = threadIdx.x){
     int lane = indx & 31;
     s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx][SCAN_SMEM_WIDTH - 1]; // in last column we doing the sums
     if (lane >= 1)  s_data[indx][SCAN_SMEM_WIDTH] = s_data[indx - 1][SCAN_SMEM_WIDTH] + s_data[indx][SCAN_SMEM_WIDTH];
@@ -62,7 +110,7 @@ __device__ __inline__ void scan_warp_merrill_srts(volatile float (*s_data)[SCAN_
 // merrill_srts reduce kernel
 __global__ void reduce(float4 *d_input, float *d_output){
 
-    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; // + 1 padding, python script
+    __shared__ float s_data[32][SMEM_TOTAL_WIDTH];
     int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
 
     d_input += idx;
@@ -73,36 +121,23 @@ __global__ void reduce(float4 *d_input, float *d_output){
 
     float4 item;
     float sum = 0;
-    float seed = 0;
 
     #pragma unroll
     for(int i = 0; i < WORK_PER_THREAD; i++){
         item = d_input[i * BLOCKSIZE];
-        sum = item.x + item.y + item.z + item.w;
-        if(threadIdx.x == 0){
-            sum += seed;
+        sum += item.x + item.y + item.z + item.w; 
+    }
+    s_data[row][col] = sum;
+    __syncthreads();
+
+    if((threadIdx.x >> 5) == 0){
+        #pragma unroll
+        for(int i = 1; i < SCAN_SMEM_WIDTH; i++){
+            s_data[threadIdx.x][i] += s_data[threadIdx.x][i - 1];
         }
-
-        s_data[row][col] = sum;
-        __syncthreads();
-
-        if((threadIdx.x >> 5) == 0){
-            #pragma unroll
-            for(int j = 1; j < SCAN_SMEM_WIDTH; j++){
-                s_data[threadIdx.x][j] += s_data[threadIdx.x][j - 1];
-            }
-            scan_warp_merrill_srts(s_data);
-        }
-
-        // after simt scan we work on first warp, so no need for sync
-        if(threadIdx.x == 0){
-            seed = s_data[31][SCAN_SMEM_WIDTH]; // total sum is at this cell
-        }
-
-        __syncthreads();
+        scan_warp_merrill_srts(s_data);
+    }
         
-    }   
-
     if(threadIdx.x == 0){
         d_output[0] = s_data[31][SCAN_SMEM_WIDTH];
     }    
@@ -111,7 +146,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
 // merrill_srts scan kernel
 __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
-    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1];
+    __shared__ float s_data[32][SMEM_TOTAL_WIDTH];
     int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
 
     d_input += idx;
@@ -162,7 +197,6 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
             seed = s_data[31][SCAN_SMEM_WIDTH];
         }
 
-        __syncthreads();
         d_output[i * BLOCKSIZE] = item;
     }
 }
@@ -170,7 +204,7 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 // two level reduce then scan - middle scan kernel
 __global__ void middle_scan(float *seeds){
 
-    __shared__ float s_data[32][SCAN_SMEM_WIDTH + 1]; 
+    __shared__ float s_data[32][SMEM_TOTAL_WIDTH]; 
     int row = threadIdx.x >> LOG2_SCAN_SMEM_WIDTH;
     int col = threadIdx.x & (SCAN_SMEM_WIDTH - 1);
     
@@ -231,7 +265,6 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "reduce: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
     
-
     cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan);
     checkCudaErrors(cudaGetLastError());
@@ -275,7 +308,7 @@ void check(float4 *h_input, float4 *h_output){
         temp3[i] = temp1[i] + temp3[i - 1];
     }
 
-    std::cout<<"first 50 elements:\n";
+    std::cout<<"first 1050 elements:\n";
     std::cout<<"element"<<"\tcpu"<<"\tgpu\n";
 
     for(int i = 0; i < 1050; i++){
