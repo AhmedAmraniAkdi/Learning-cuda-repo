@@ -119,7 +119,38 @@ __global__ void reduce(float4 *d_input, float *d_output){
     int row = threadIdx.x >> LOG2_SCAN_SMEM_WIDTH;
     int col = threadIdx.x & (SCAN_SMEM_WIDTH - 1);
 
-    float4 item;
+
+    float4 item[WORK_PER_THREAD];
+    float sum[WORK_PER_THREAD];
+    float total_sum = 0;
+
+    #pragma unroll
+    for(int i = 0; i < WORK_PER_THREAD; i++){
+        item[i] = d_input[i * BLOCKSIZE];
+        sum[i] = item[i].x + item[i].y + item[i].z + item[i].w; 
+    }
+
+    #pragma unroll
+    for(int i = 0; i < WORK_PER_THREAD; i++){
+        s_data[row][col] = sum[i];
+        __syncthreads();
+        if((threadIdx.x >> 5) == 0){
+            #pragma unroll
+            for(int i = 1; i < SCAN_SMEM_WIDTH; i++){
+                s_data[threadIdx.x][i] += s_data[threadIdx.x][i - 1];
+            }
+            scan_warp_merrill_srts(s_data);
+        }
+        if(threadIdx.x == 0){
+            total_sum += s_data[31][SCAN_SMEM_WIDTH];
+        }
+    }
+
+    if(threadIdx.x == 0){
+        d_output[0] = total_sum;
+    }
+
+    /*float4 item;
     float sum = 0;
 
     #pragma unroll
@@ -140,7 +171,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
         
     if(threadIdx.x == 0){
         d_output[0] = s_data[31][SCAN_SMEM_WIDTH];
-    }    
+    }*/    
 }
 
 // merrill_srts scan kernel
@@ -155,7 +186,55 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
     int row = threadIdx.x >> LOG2_SCAN_SMEM_WIDTH;
     int col = threadIdx.x & (SCAN_SMEM_WIDTH - 1);
 
-    float4 item;
+
+    float4 item[WORK_PER_THREAD];
+    float seed = 0;
+
+    // hopefully with this, it will start the requests for the loads for the tiles i+1 while working on tile i
+    #pragma unroll
+    for(int i = 0; i < WORK_PER_THREAD; i++){
+        item[i] = d_input[i * BLOCKSIZE];
+        item[i].y += item[i].x;
+        item[i].z += item[i].y;
+        item[i].w += item[i].z;
+    }
+
+    #pragma unroll
+    for(int i = 0; i < WORK_PER_THREAD; i++){
+        if(threadIdx.x == 0 && blockIdx.x > 0 && i==0){
+            item[i] += seeds[blockIdx.x - 1];
+        }
+        item[i] += seed; // only thread 0 adds seed here
+        s_data[row][col] = item[i].w;
+        __syncthreads();
+
+        if((threadIdx.x >> 5) == 0){
+            #pragma unroll
+            for(int j = 1; j < SCAN_SMEM_WIDTH; j++){
+                s_data[threadIdx.x][j] += s_data[threadIdx.x][j - 1];
+            }
+            scan_warp_merrill_srts(s_data);
+        }
+        __syncthreads();
+
+        // add the SIMT scan seeds
+        // sum last column of simt scan
+        if(row > 0){
+            item[i] += s_data[row - 1][SCAN_SMEM_WIDTH];
+        }
+        // sum element before in row, serial scan
+        if(col > 0){
+            item[i] += s_data[row][col - 1];
+        }
+
+        if(threadIdx.x == 0){
+            seed = s_data[31][SCAN_SMEM_WIDTH];
+        }
+
+        d_output[i * BLOCKSIZE] = item[i];
+    }
+
+    /*float4 item;
 
     float seed = 0;
 
@@ -198,7 +277,7 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
         }
 
         d_output[i * BLOCKSIZE] = item;
-    }
+    }*/
 }
 
 // two level reduce then scan - middle scan kernel
