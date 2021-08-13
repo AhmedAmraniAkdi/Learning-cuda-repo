@@ -15,7 +15,7 @@ scan_v2:
 	nvcc -arch=sm_50 scan_v2.cu -o scan_v2.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
 
 scan_v3:
-	nvcc -arch=sm_50 scan_v3.cu -o scan_v2.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
+	nvcc -arch=sm_50 scan_v3.cu -o scan_v3.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
 
 .PHONY: remove
 remove:

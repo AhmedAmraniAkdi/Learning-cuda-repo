@@ -1,16 +1,26 @@
 // we continue the optimisation of scan_v2, now using warp level primitives as shuffle maybe some cooperative groups here and there who knows
 
+/*
+#define ARR_SIZE (1 << 25)
+#define BLOCKSIZE 128
+#define LOG2_BLOCKSIZE 7
+#define WARPS_NUM (BLOCKSIZE/32)
+#define WORK_PER_THREAD 8 // 8 float4 each thread on scanning and reducing
+#define LOG2_WORK_PER_THREAD 5 // 32 elements (8 float4)
+#define MIDDLE_SCAN_STEP_PER_THREAD 64 // 2^(25 - 5 - 7 - 7) // -5 (8 float4 loads) - 7 (blocksize) - 7 (each thread of middle scan block)
+*/
+
 
 #define ARR_SIZE (1 << 25)
 #define BLOCKSIZE 128
 #define LOG2_BLOCKSIZE 7
 #define WARPS_NUM (BLOCKSIZE/32)
 #define WORK_PER_THREAD 8 // 8 float4 each thread on scanning and reducing
-#define LOG2_WORK_PER_THREAD 5 // 8 elements (2 float4)
-#define MIDDLE_SCAN_STEP_PER_THREAD 64 // 2^(25 - 5 - 7 - 7) // -5 (8 float4 loads) - 7 (blocksize) - 7 (each thread of middle scan block)
-#define MIDDLE_SCAN_STEP_PER_WARP 8 // 64 steps for 128 threads = 64 steps for 4 warps, 64/(32/4) = 8 iterations of smem warp scan and in each one doing 8 elements
-#define MIDDLE_SCAN_WORK_PER_THREAD (BLOCKSIZE/WARPS_NUM) // as we said 8
+#define LOG2_WORK_PER_THREAD 5 // 32 elements (8 float4)
 
+#define MIDDLE_SCAN_WORK_PER_THREAD 64 // 2^(25 - 5 - 7 - 7) // -5 (8 float4 loads) - 7 (blocksize) - 7 (each thread of middle scan block)
+#define MIDDLE_SCAN_WORK_PER_WARP (32/WARPS_NUM) // 8 = 8 iterations for 4 warps to fill 32 wide smem
+#define MIDDLE_SCAN_STEP_PER_WARP (MIDDLE_SCAN_WORK_PER_THREAD/MIDDLE_SCAN_WORK_PER_WARP) // we need to repeat 8 steps 8 times to consume the 64 work per thread/warp
 
 #include <cuda_runtime.h>
 #include <iostream>
@@ -30,7 +40,8 @@ __device__ __inline__ void warp_smem_scan(volatile float *s_data, int indx = thr
 
 __global__ void reduce(float4 *d_input, float *d_output){
 
-    __shared__ float s_data[32];
+    //__shared__ float s_data[32];
+    __shared__ float s_data[WARPS_NUM];
     int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
     int lane = threadIdx.x & 31;
     int warpid = threadIdx.x >> 5;
@@ -60,6 +71,29 @@ __global__ void reduce(float4 *d_input, float *d_output){
         sum[i] += __shfl_sync(0xffffffff, sum[i], threadIdx.x - 16);
     }
 
+    if(lane == 31){
+        #pragma unroll
+        for(int i = 1; i <WORK_PER_THREAD; i++){
+            sum[i] += sum[i - 1];
+        }
+
+        s_data[warpid] = sum[WORK_PER_THREAD - 1];
+    }
+
+    __syncthreads();
+
+    if(threadIdx.x == 31){
+
+        #pragma unroll
+        for(int i = 1; i < WARPS_NUM; i++){
+            s_data[i] += s_data[i - 1];
+        }
+
+        d_output[0] = s_data[WARPS_NUM - 1];
+
+    }
+
+    /*
     //the 31th threads will have the sum - no need for smem
 
     if(lane == 31){
@@ -77,10 +111,9 @@ __global__ void reduce(float4 *d_input, float *d_output){
 
     if(threadIdx.x == 0){
         d_output[0] = s_data[31];
-    }
+    }*/
 }
-
-// merrill_srts scan kernel
+/*
 __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
     __shared__ float s_data[32];
@@ -92,6 +125,7 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
     d_output += idx;
 
     float4 item[WORK_PER_THREAD];
+    float shift_variable;
 
     item[0] = d_input[0];
     item[0].x += (threadIdx.x == 0 && blockIdx.x > 0) ? seeds[blockIdx.x - 1] : 0;
@@ -109,11 +143,20 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
     
     #pragma unroll
     for(int i = 0; i < WORK_PER_THREAD; i++){
-        if (lane >= 1)  item[i] += __shfl_sync(0xffffffff, item[i].w, threadIdx.x - 1);
-        if (lane >= 2)  item[i] += __shfl_sync(0xffffffff, item[i].w, threadIdx.x - 2);
-        if (lane >= 4)  item[i] += __shfl_sync(0xffffffff, item[i].w, threadIdx.x - 4);
-        if (lane >= 8)  item[i] += __shfl_sync(0xffffffff, item[i].w, threadIdx.x - 8);
-        if (lane >= 16) item[i] += __shfl_sync(0xffffffff, item[i].w, threadIdx.x - 16);
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 1);
+            if (lane >= 1) item[i] += shift_variable;
+
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 2);
+            if (lane >= 2)  item[i] += shift_variable;
+            
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 4);
+            if (lane >= 4)  item[i] += shift_variable;
+            
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 8);
+            if (lane >= 8)  item[i] += shift_variable;
+            
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 16);
+            if (lane >= 16) item[i] += shift_variable;
     }
 
     if(lane == 31){
@@ -144,8 +187,7 @@ __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
     }
     
 }
-
-// two level reduce then scan - middle scan kernel
+*/
 __global__ void middle_scan(float *seeds){
 
     __shared__ float s_data[32];
@@ -155,31 +197,43 @@ __global__ void middle_scan(float *seeds){
     float seed = 0;
     seeds += threadIdx.x;
 
-    float item[MIDDLE_SCAN_WORK_PER_THREAD]; // 4 warps, need 8 to fill 32
+    float item[MIDDLE_SCAN_WORK_PER_WARP]; // 4 warps, need 8 to fill 32
+
+    float shift_variable = 0;
 
     // cyclically scan the reduced sums
     #pragma unroll
     for(int k = 0; k < MIDDLE_SCAN_STEP_PER_WARP; k++){
 
-        item[0] = seeds[0] + seed;
+        item[0] = seeds[0] + seed; //only thread 0 adds seed here
         
         #pragma unroll
-        for(int i = 1; i < MIDDLE_SCAN_WORK_PER_THREAD; i++){
+        for(int i = 1; i < MIDDLE_SCAN_WORK_PER_WARP; i++){
             item[i] = seeds[i * BLOCKSIZE];
         }
 
         #pragma unroll
-        for(int i = 0; i < MIDDLE_SCAN_WORK_PER_THREAD; i++){
-            if (lane >= 1)  item[i] += __shfl_sync(0xffffffff, item[i], threadIdx.x - 1);
-            if (lane >= 2)  item[i] += __shfl_sync(0xffffffff, item[i], threadIdx.x - 2);
-            if (lane >= 4)  item[i] += __shfl_sync(0xffffffff, item[i], threadIdx.x - 4);
-            if (lane >= 8)  item[i] += __shfl_sync(0xffffffff, item[i], threadIdx.x - 8);
-            if (lane >= 16) item[i] += __shfl_sync(0xffffffff, item[i], threadIdx.x - 16);
+        for(int i = 0; i < MIDDLE_SCAN_WORK_PER_WARP; i++){
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 1);
+            if (lane >= 1) item[i] += shift_variable;
+
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 2);
+            if (lane >= 2)  item[i] += shift_variable;
+            
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 4);
+            if (lane >= 4)  item[i] += shift_variable;
+            
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 8);
+            if (lane >= 8)  item[i] += shift_variable;
+            
+            shift_variable = __shfl_sync(0xffffffff, item[i], threadIdx.x - 16);
+            if (lane >= 16) item[i] += shift_variable;
+
         }
 
         if(lane == 31){
             #pragma unroll
-            for(int i = 0; i < MIDDLE_SCAN_WORK_PER_THREAD; i++){
+            for(int i = 0; i < MIDDLE_SCAN_WORK_PER_WARP; i++){
                 s_data[warpid + i * WARPS_NUM] = item[i];
             }
         }
@@ -196,19 +250,19 @@ __global__ void middle_scan(float *seeds){
 
         __syncthreads();
 
-        if(warpid > 0){
-            #pragma unroll
-            for(int i = 0; i < MIDDLE_SCAN_WORK_PER_THREAD; i++){
+        #pragma unroll
+        for(int i = 0; i < MIDDLE_SCAN_WORK_PER_WARP; i++){
+            if (!(warpid == 0 && i == 0)){
                 item[i] += s_data[warpid - 1 + i * WARPS_NUM];
             }
         }
 
         #pragma unroll
-        for(int i = 0; i < MIDDLE_SCAN_WORK_PER_THREAD; i++){
+        for(int i = 0; i < MIDDLE_SCAN_WORK_PER_WARP; i++){
             seeds[i * BLOCKSIZE] = item[i];
         }
 
-        seeds += BLOCKSIZE/WARPS_NUM * BLOCKSIZE;
+        seeds += MIDDLE_SCAN_WORK_PER_WARP * BLOCKSIZE;
     }
 }
 
@@ -236,6 +290,7 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     cudaEventElapsedTime(&elapsed_time, start, stop);
     printf( "reduce: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
+
     
     cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan);
@@ -246,14 +301,20 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "middle scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    cudaEventRecord(start, 0);
+    float *partial_result_reduce = (float*)malloc(sizeof(float) * temp);
+    cudaMemcpy(partial_result_reduce, d_scan,  temp * sizeof(float), cudaMemcpyDeviceToHost);
+
+    for(int i = 0; i < temp; i++)
+        std::cout<<partial_result_reduce[i]<<"\n";
+
+    /*cudaEventRecord(start, 0);
     scan<<<dimGrid, dimBlock>>>(d_input, d_scan, d_output);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsed_time, start, stop);
     printf( "final scan: %.8f ms\n", elapsed_time);
-    total_time += elapsed_time;
+    total_time += elapsed_time;*/
 
     printf("total time GPU %.8fms\n", total_time);
 
@@ -309,9 +370,9 @@ int main(void){
 
     cuda_interface_scan(d_input, d_output);
 
-    cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
+    /*cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
-    check(h_input, h_output);
+    check(h_input, h_output);*/
 
     cudaFree(d_input);
     cudaFree(d_output);
