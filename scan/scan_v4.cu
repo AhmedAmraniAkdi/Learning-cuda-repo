@@ -1,26 +1,24 @@
-// we continue the optimisation of scan_v2, now using warp level primitives as shuffle maybe some cooperative groups here and there who knows
+// we continue the optimisation of scan_v4, playing around grid sizes/threads/work per thread, etc.
 
 /*
-#define ARR_SIZE (1 << 25)
-#define BLOCKSIZE 128
-#define LOG2_BLOCKSIZE 7
-#define WARPS_NUM (BLOCKSIZE/32)
-#define WORK_PER_THREAD 8 // 8 float4 each thread on scanning and reducing
-#define LOG2_WORK_PER_THREAD 5 // 32 elements (8 float4)
-#define MIDDLE_SCAN_STEP_PER_THREAD 64 // 2^(25 - 5 - 7 - 7) // -5 (8 float4 loads) - 7 (blocksize) - 7 (each thread of middle scan block)
+
+    max block per sm 32
+    max num of warps per sm 64
+    64k 32bit registers per sm
+    64k shared mem per sm
+
 */
 
 
 #define ARR_SIZE (1 << 25)
+#define GRIDSIZE 256
 #define BLOCKSIZE 128
 #define LOG2_BLOCKSIZE 7
 #define WARPS_NUM (BLOCKSIZE/32)
-#define WORK_PER_THREAD 8 // 8 float4 each thread on scanning and reducing
-#define LOG2_WORK_PER_THREAD 5 // 32 elements (8 float4)
+#define WORK_PER_THREAD 256 // 2^(25 - 8 - 7 - 2) = 256 float4 = 1024 elements
+#define LOG2_WORK_PER_THREAD 10 // 1024 elements (256 float4)
 
-#define MIDDLE_SCAN_WORK_PER_THREAD 64 // 2^(25 - 5 - 7 - 7) // -5 (8 float4 loads) - 7 (blocksize) - 7 (each thread of middle scan block)
-#define MIDDLE_SCAN_WORK_PER_WARP (32/WARPS_NUM) // 8 = 8 iterations for 4 warps to fill 32 wide smem
-#define MIDDLE_SCAN_STEP_PER_WARP (MIDDLE_SCAN_WORK_PER_THREAD/MIDDLE_SCAN_WORK_PER_WARP) // we need to repeat 8 steps 8 times to consume the 64 work per thread/warp
+#define MIDDLE_SCAN_WORK_PER_THREAD (GRIDSIZE/BLOCKSIZE) // 2
 
 #include <cuda_runtime.h>
 #include <iostream>
@@ -40,8 +38,7 @@ __device__ __inline__ void warp_smem_scan(volatile float *s_data, int indx = thr
 
 __global__ void reduce(float4 *d_input, float *d_output){
 
-    //__shared__ float s_data[32];
-    __shared__ float s_data[WARPS_NUM];
+    __shared__ float s_data[32];
     int idx = blockDim.x * blockIdx.x * WORK_PER_THREAD + threadIdx.x;
     int lane = threadIdx.x & 31;
     int warpid = threadIdx.x >> 5;
@@ -49,35 +46,28 @@ __global__ void reduce(float4 *d_input, float *d_output){
     d_input += idx;
     d_output += blockIdx.x;
 
-    float4 item[WORK_PER_THREAD];
     float sum[WORK_PER_THREAD];
 
     #pragma unroll
     for(int i = 0; i < WORK_PER_THREAD; i++){
-        item[i] = d_input[i * BLOCKSIZE];
+        sum[i] = d_input[i * BLOCKSIZE].x + d_input[i * BLOCKSIZE].y + d_input[i * BLOCKSIZE].z + d_input[i * BLOCKSIZE].w; 
     }
 
     #pragma unroll
-    for(int i = 0; i < WORK_PER_THREAD; i++){
-        sum[i] = item[i].x + item[i].y + item[i].z + item[i].w; 
+    for(int i = 1; i < WORK_PER_THREAD; i++){
+        sum[0] += sum[i];
     }
 
-    #pragma unroll
-    for(int i = 0; i < WORK_PER_THREAD; i++){
-        sum[i] += __shfl_sync(0xffffffff, sum[i], threadIdx.x - 1);
-        sum[i] += __shfl_sync(0xffffffff, sum[i], threadIdx.x - 2);
-        sum[i] += __shfl_sync(0xffffffff, sum[i], threadIdx.x - 4);
-        sum[i] += __shfl_sync(0xffffffff, sum[i], threadIdx.x - 8);
-        sum[i] += __shfl_sync(0xffffffff, sum[i], threadIdx.x - 16);
-    }
+    // at this point we have 1 sum per thread, so 128, we reduce them to 4
+
+    sum[0] += __shfl_sync(0xffffffff, sum[0], threadIdx.x - 1);
+    sum[0] += __shfl_sync(0xffffffff, sum[0], threadIdx.x - 2);
+    sum[0] += __shfl_sync(0xffffffff, sum[0], threadIdx.x - 4);
+    sum[0] += __shfl_sync(0xffffffff, sum[0], threadIdx.x - 8);
+    sum[0] += __shfl_sync(0xffffffff, sum[0], threadIdx.x - 16);
 
     if(lane == 31){
-        #pragma unroll
-        for(int i = 1; i <WORK_PER_THREAD; i++){
-            sum[i] += sum[i - 1];
-        }
-
-        s_data[warpid] = sum[WORK_PER_THREAD - 1];
+        s_data[warpid] = sum[0];
     }
 
     __syncthreads();
@@ -113,7 +103,7 @@ __global__ void reduce(float4 *d_input, float *d_output){
         d_output[0] = s_data[31];
     }*/
 }
-
+/*
 __global__ void scan(float4 *d_input, float *seeds, float4 *d_output){
 
     __shared__ float s_data[32];
@@ -265,13 +255,13 @@ __global__ void middle_scan(float *seeds){
         seeds += MIDDLE_SCAN_WORK_PER_WARP * BLOCKSIZE;
     }
 }
-
+*/
 // main + interface
-void cuda_interface_scan(float4* d_input, float4* d_output){
+void cuda_interface_scan(float4* d_input, float4* d_output, float4 *h_input){
 
-    int temp = ARR_SIZE >> (LOG2_WORK_PER_THREAD + LOG2_BLOCKSIZE); // each thread processes 8 float4
+    //int temp = ARR_SIZE >> (LOG2_WORK_PER_THREAD + LOG2_BLOCKSIZE); // each thread processes 8 float4
     dim3 dimBlock(BLOCKSIZE);
-    dim3 dimGrid(temp);
+    dim3 dimGrid(GRIDSIZE);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -280,7 +270,7 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     float elapsed_time;
 
     float *d_scan;
-    cudaMalloc((void **)&d_scan, temp * sizeof(float));
+    cudaMalloc((void **)&d_scan, GRIDSIZE * sizeof(float));
 
     cudaEventRecord(start, 0);
     reduce<<<dimGrid, dimBlock>>>(d_input, d_scan);
@@ -291,8 +281,24 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "reduce: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    
-    cudaEventRecord(start, 0);
+
+    float *cpu_out = (float*)malloc(GRIDSIZE * sizeof(float));
+    /*float *temp = (float*) h_input;
+    for(int i = 0; i < GRIDSIZE; i++){
+        cpu_out[i] = 0;
+        for(int j = 0; j < (1 << 17); i++){
+            cpu_out[i] += temp[j]; 
+        }
+        temp += (1 << 17);
+    }*/
+
+    float *res = (float*)malloc(GRIDSIZE * sizeof(float));
+    cudaMemcpy(res, d_scan,  GRIDSIZE * sizeof(float), cudaMemcpyDeviceToHost);
+
+    for(int i = 0; i < GRIDSIZE; i++){
+        std::cout<<res[i]<<" "<<cpu_out[i]<< "\n";
+    }
+    /*cudaEventRecord(start, 0);
     middle_scan<<<1, dimBlock>>>(d_scan);
     checkCudaErrors(cudaGetLastError());
     cudaEventRecord(stop, 0);
@@ -311,7 +317,7 @@ void cuda_interface_scan(float4* d_input, float4* d_output){
     printf( "final scan: %.8f ms\n", elapsed_time);
     total_time += elapsed_time;
 
-    printf("total time GPU %.8fms\n", total_time);
+    printf("total time GPU %.8fms\n", total_time);*/
 
     cudaFree(d_scan);
     cudaEventDestroy(start);
@@ -363,11 +369,11 @@ int main(void){
 
     cudaMemcpy(d_input, h_input, ARR_SIZE * sizeof(float), cudaMemcpyHostToDevice);
 
-    cuda_interface_scan(d_input, d_output);
+    cuda_interface_scan(d_input, d_output, h_input);
 
-    cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
+    /*cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
-    check(h_input, h_output);
+    check(h_input, h_output);*/
 
     cudaFree(d_input);
     cudaFree(d_output);
