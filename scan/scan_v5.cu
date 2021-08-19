@@ -177,32 +177,33 @@ void cuda_interface_scan(float* d_input, float* d_output){
     cudaEventDestroy(stop);
 }   
 
-void fill_array(float *h_input){
+void fill_array(float *h_input, int padded_length){
 
-    float *temp = (float*) h_input;
     for(int i = 0; i <  ARR_SIZE; i++){
-        temp[i] = (float) rand() / RAND_MAX;
+        h_input[i] = (float) rand() / RAND_MAX;
+    }
+    for(int i = ARR_SIZE; i < padded_length; i++){
+        h_input[i] = 0;
     }
 }
 
 void check(float *h_input, float *h_output){
-    float *temp1 = (float*) h_input;
-    float *temp2 = (float*) h_output;
-    float *temp3 = (float*) malloc(ARR_SIZE * sizeof(float));
 
-    temp3[0] = temp1[0];
+    float *temp = (float*) malloc(ARR_SIZE * sizeof(float));
+
+    temp[0] = h_input[0];
     for(int i = 1; i < ARR_SIZE; i++){
-        temp3[i] = temp1[i] + temp3[i - 1];
+        temp[i] = h_input[i] + temp[i - 1];
     }
 
     std::cout<<"first 1050 elements:\n";
     std::cout<<"element"<<"\tcpu"<<"\tgpu\n";
 
     for(int i = 0; i < 1050; i++){
-        std::cout<<i<<"\t"<<temp1[i] << "\t" << temp3[i] << "\t" << temp2[i] <<"\n";
+        std::cout<<i<<"\t"<<h_input[i] << "\t" << temp[i] << "\t" << h_output[i] <<"\n";
     }
 
-    free(temp3);
+    free(temp);
 }
 
 int main(void){
@@ -212,13 +213,15 @@ int main(void){
     float *h_input, *h_output;
     float *d_input, *d_output;
 
-    h_input = (float*) malloc(ARR_SIZE * sizeof(float));
+    int padded_length = MAXNUM_SM_960M * BLOCK_STEP * BLOCK_SIZE * WORK_PER_THREAD;
+
+    h_input = (float*) malloc(padded_length * sizeof(float));
     h_output = (float*) malloc(ARR_SIZE * sizeof(float));
      
-    fill_array(h_input);
+    fill_array(h_input, padded_length);
 
-    cudaMalloc((void **)&d_input, ARR_SIZE * sizeof(float));
-    cudaMalloc((void **)&d_output, ARR_SIZE * sizeof(float));
+    cudaMalloc((void **)&d_input, padded_length * sizeof(float));
+    cudaMalloc((void **)&d_output, padded_length * sizeof(float));
 
     cudaMemcpy(d_input, h_input, ARR_SIZE * sizeof(float), cudaMemcpyHostToDevice);
 
