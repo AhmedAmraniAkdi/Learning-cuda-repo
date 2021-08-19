@@ -6,7 +6,7 @@
 INCSAMPLES_H = -I "C:\ProgramData\NVIDIA Corporation\CUDA Samples\v11.0\common\inc"
 
 .PHONY: all
-all: remove scan_v4
+all: remove scan_v5
 
 scan:
 	nvcc -arch=sm_50 scan.cu -o scan.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H)
@@ -19,6 +19,12 @@ scan_v3:
 
 scan_v4:
 	nvcc -arch=sm_50 scan_v4.cu -o scan_v4.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
+
+scan_v5:
+	nvcc -arch=sm_50 scan_v5.cu -o scan_v5.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
+
+thrust:
+	nvcc -arch=sm_50 thrust33m.cu -o thrust33m.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
 
 .PHONY: remove
 remove:
