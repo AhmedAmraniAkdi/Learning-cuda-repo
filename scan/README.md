@@ -10,4 +10,4 @@ GPU scan_v2 down to 5.7ms before tuning block sizes and stuff, let'see what prof
 
 GPU scanv_3 and v4 same time, memory bound, need to change algorithm/number of memory accesses
 
-GPU scanv5, only 1 kernel, time = ?
+GPU scanv5, only 1 kernel, time = 4.3ms let's go!!
