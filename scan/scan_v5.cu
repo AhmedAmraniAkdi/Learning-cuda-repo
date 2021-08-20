@@ -9,8 +9,6 @@ High on copium
   
  */
 
-
-
 #define ARR_SIZE (1 << 25)
 #define MAXNUM_SM_960M 5 // we will saturate the SM with 1024 threads consuming all ressources and grid size == num of sm that way we prevent deadlock
 #define BLOCK_SIZE 1024
@@ -19,17 +17,13 @@ High on copium
 #define BLOCK_STEP 164 // 2^25 / 5 / 1024 / 40 ~ 164
 //round up to 164 we can either round up to the closes multiple of the arr size, or put guards, we're padding easier going to add 32kb of zeros
 
-
 #include <cuda_runtime.h>
 #include <iostream>
 #include <stdlib.h>
 #include <helper_cuda.h>
 #include <helper_math.h>
 
-
-
-__device__ float block_count = 0;
-
+__device__ int block_count = 0;
 
 __global__ void scan(float *d_input, float* seeds, float *d_output){
 
@@ -41,7 +35,7 @@ __global__ void scan(float *d_input, float* seeds, float *d_output){
     float items[WORK_PER_THREAD];
     d_input += idx;
     d_output += idx;
-    seeds += blockIdx.x - 1;
+    seeds += blockIdx.x;
 
     float shift_variable = 0;
     float offset = 0;
@@ -51,7 +45,7 @@ __global__ void scan(float *d_input, float* seeds, float *d_output){
 
         // load elements
         #pragma unroll
-        for(int j = 0; j < WORK_PER_THREAD; i++){
+        for(int j = 0; j < WORK_PER_THREAD; j++){
             items[j] = d_input[32 * j];
         }
 
@@ -110,7 +104,6 @@ __global__ void scan(float *d_input, float* seeds, float *d_output){
         __syncthreads();
 
         // add the inter warp offsets
-        #pragma unroll
         if(warpid > 0){
             #pragma unroll
             for(int j = 0; j < WORK_PER_THREAD; j++){
@@ -121,7 +114,7 @@ __global__ void scan(float *d_input, float* seeds, float *d_output){
         // wait for the offset to be ready
         if(!(blockIdx.x == 0 && i == 0)){
             while(atomicAdd(&block_count, 0) < (MAXNUM_SM_960M * i + blockIdx.x)){}
-            offset = seeds[0];
+            offset = *(seeds - 1);
         }
 
         // add block offset and store
@@ -136,19 +129,21 @@ __global__ void scan(float *d_input, float* seeds, float *d_output){
         }
 
         if(threadIdx.x == 1023){
-            seeds[1] = items[WORK_PER_THREAD - 1];
+            seeds[0] = items[WORK_PER_THREAD - 1];
         }
         // makes sure the data is there when reading with atomic
         __threadfence();
 
-        atomicAdd(&block_count, 1);
+        if(threadIdx.x == 0){
+            atomicAdd(&block_count, 1);
+        }
 
         d_input += MAXNUM_SM_960M * blockDim.x * WORK_PER_THREAD;
         d_output += MAXNUM_SM_960M * blockDim.x * WORK_PER_THREAD;
         seeds += MAXNUM_SM_960M;
     }
-}
 
+}
 
 // main + interface
 void cuda_interface_scan(float* d_input, float* d_output){
@@ -187,7 +182,7 @@ void fill_array(float *h_input, int padded_length){
     }
 }
 
-void check(float *h_input, float *h_output){
+void check_result(float *h_input, float *h_output){
 
     float *temp = (float*) malloc(ARR_SIZE * sizeof(float));
 
@@ -202,6 +197,13 @@ void check(float *h_input, float *h_output){
     for(int i = 0; i < 1050; i++){
         std::cout<<i<<"\t"<<h_input[i] << "\t" << temp[i] << "\t" << h_output[i] <<"\n";
     }
+
+    float diff = 0;
+    for(int i = 0; i < ARR_SIZE; i++){
+        diff += h_output[i] - temp[i];
+    }   
+
+    std::cout<<"diff"<< diff << "\n";
 
     free(temp);
 }
@@ -229,7 +231,7 @@ int main(void){
 
     cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
-    check(h_input, h_output);
+    check_result(h_input, h_output);
 
     cudaFree(d_input);
     cudaFree(d_output);
