@@ -180,36 +180,6 @@ void fill_array(float *h_input, int padded_length){
     }
 }
 
-/*void check_result(float *h_input, float *h_output){
-
-    float *temp = (float*) malloc(ARR_SIZE * sizeof(float));
-
-    temp[0] = h_input[0];
-    for(int i = 1; i < ARR_SIZE; i++){
-        temp[i] = h_input[i] + temp[i - 1];
-    }
-
-    std::cout<<"first 40960 elements:\n";
-    std::cout<<"element"<<"\tcpu"<<"\tgpu\n";
-
-    for(int i = 204800*6; i < 204800*8; i++){
-        std::cout<<i<<"\t"<<h_input[i] << "\t" << temp[i] << "\t" << h_output[i] <<" "<< temp[i] - h_output[i] <<"\n";
-    }
-
-    float diff = 0;
-    float difff = 0;
-    for(int i = 0; i < ARR_SIZE; i++){
-        difff = h_output[i] - temp[i];
-        if(difff < -10){
-            std::cout<<"\n"<<i<<" "<<difff<<" "<<h_output[i]<<" "<<temp[i]<<"\n";
-        }
-        diff += difff;
-    }   
-
-    std::cout<<"diff"<< diff << "\n";
-
-    free(temp);
-}*/
 
 int main(void){
 
@@ -233,12 +203,6 @@ int main(void){
     cuda_interface_scan(d_input, d_output);
 
     cudaMemcpy(h_output, d_output,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
-
-    //check_result(h_input, h_output);
-
-    /*for(int i = 0; i < 3*1024*5*40; i++){
-        std::cout<<i<<" "<<h_output[i]<<"\n";
-    }*/
 
     printf("sum %.8f", h_output[ARR_SIZE - 1]);
 
