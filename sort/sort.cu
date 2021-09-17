@@ -1,67 +1,20 @@
-#define ARR_SIZE (1 << 25)
-#define MAX_DEPTH 24
-
 #include <cuda_runtime.h>
 #include <iostream>
 #include <stdlib.h>
 #include <helper_cuda.h>
-#include <compact.cuh>
 
-/*
+#define ARR_SIZE (1 << 25)
 
-    4 5 8 9 8 5 1 2 3 1 6 pivot = 6
-    i
-   s
-
-    4 5 8 9 8 5 1 2 3 1 6 pivot = 6
-    i
-    s
-
-    4 5 8 9 8 5 1 2 3 1 6 pivot = 6
-      i
-      s
-
-    4 5 8 9 8 5 1 2 3 1 6 pivot = 6
-        i
-      s
-    
-    4 5 8 9 8 5 1 2 3 1 6 pivot = 6
-            i
-      s
-    
-    4 5 5 9 8 8 1 2 3 1 6 pivot = 6
-              i
-        s
-
-    4 5 5 9 8 8 1 2 3 1 6 pivot = 6
-                i
-          s
-
-    ...
-*/
-
-__device__ void swap(float *d_input, float* a, float* b){
+__global__ void merge_path(float *d_input){
 
 }
 
-
-__device__ void selection_sort(float *d_input, int left, int right){
-
-}
-
-__global__ void quicksort(float *d_input, int left, int right, int depth){
-
-    if(depth == MAX_DEPTH || (right - left <= 32)){
-        selection_sort(d_input, left, right);
-    } else {
-
-
-    }
+__global__ void odd_even_merge_sort(float *d_input){
 
 }
 
 // main + interface
-void cuda_interface_scan(float* d_input){
+void cuda_interface_sort(float* d_input){
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -69,8 +22,11 @@ void cuda_interface_scan(float* d_input){
     float elapsed_time;
 
     cudaEventRecord(start, 0);
-    quicksort<<<1,1>>>(d_input, 0, ARR_SIZE - 1, 0);
-    checkCudaErrors(cudaGetLastError());
+
+
+    // odd even + merge path on loop
+
+
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsed_time, start, stop);
@@ -98,10 +54,10 @@ int main(void){
      
     fill_array(h_input);
 
-    cudaMalloc((void **)&d_input, ARR_SIZE * sizeof(float));*
+    cudaMalloc((void **)&d_input, ARR_SIZE * sizeof(float));
     cudaMemcpy(d_input, h_input, ARR_SIZE * sizeof(float), cudaMemcpyHostToDevice);
 
-    cuda_interface_scan(d_input);
+    cuda_interface_sort(d_input);
 
     cudaMemcpy(h_input, d_input,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
 
