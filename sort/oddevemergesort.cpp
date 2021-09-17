@@ -1,4 +1,5 @@
 // https://stackoverflow.com/questions/34426337/how-to-fix-this-non-recursive-odd-even-merge-sort-algorithm
+// Odd even merge sort - The Art of Computer Programming, vol 3 (algorithm 5.2.2M)
 
 #include<iostream>
 #include<stdlib.h>
