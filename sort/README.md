@@ -13,3 +13,5 @@ Sorting using bitonic network with CUDA - Ranieri Baraglia, Gabriele Capannini, 
 Comparison of parallel sorting algorithms - Darko Bozidar, Tomaz Dobravec
 
 Odd even merge sort - The Art of Computer Programming, vol 3 (algorithm 5.2.2M)
+
+Warpsize bitonic sort - https://on-demand.gputechconf.com/gtc/2013/presentations/S3174-Kepler-Shuffle-Tips-Tricks.pdf
