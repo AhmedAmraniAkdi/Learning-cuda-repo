@@ -10,10 +10,19 @@
 #define LOG2BLOCKSIZE1 5
 #define LOG2ARR_SIZE 20
 
-#define BLOCKSIZE2 (1 << 64)
-#define GRIDSIZE2 (1 << 10)
+#define BLOCKSIZE2 (1 << 5)
+#define GRIDSIZE2 (1 << 8)
 
 /*
+    merge path configuration:
+
+
+
+
+
+*/
+
+
 __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *B, int start_b, int end_b){
 
 
@@ -26,11 +35,65 @@ __global__ void merge_sort(float *d_input, int length, float *diag_A, float *dia
 
 }
 
-__global__ void merge_path(float *d_input, int length, float *diag_A, float *diag_B){
 
+/*
+    ok, so what's the problem... imagine we are merging 2 sorted arrays A and B...
+    and what a single block processes is less than the length of each array...
+    we will need for example 2 blocks to merge the 2 arrays...
+    block 1 will start from the top left corner finding each intersection of the diagonals with the path
+    but block 2 does start where? what's the x and y offsets? we can't have communication between blocks
 
+    the solution: make a gridsize partition when merging, that way each block has it own x, y offset
 
-}*/
+    inconvenient: we can't use shared memory: the number of elements is too large for it
+    convenient: A diag and B diag are gridsize arrays, so small
+*/
+
+// gets called onyl when more than 1 block is needed to process the arrays
+// 1 block 256 threads
+__global__ void grid_partition_path(float *d_input, float *diag_A, float *diag_B, int length, int blocksperarray){
+
+    // get where in d_input we are
+    //d_input += something;
+    
+    float *A = d_input;
+    float *B = d_input + length;
+    
+    // blocksperarray blocks process the array
+    // so each blocksperarray_i block starts at 0
+    if(threadIdx.x & (blocksperarray - 1)){
+        diag_A[threadIdx.x] = 0;
+        diag_B[threadIdx.x] = 0;
+    }
+    
+    int diag = (threadIdx.x + 1) * length * 2 / blockDim.x;
+    int atop = diag > length ? length : diag;
+    int btop = diag > length ? diag - length : 0;
+    int abot = btop;
+
+    int ai, bi;
+    int offset;
+
+    while(1){
+
+        offset = (atop - abot)/2;
+        ai = atop - offset;
+        bi = btop + offset;
+
+        if (A[ai] > B[bi - 1]){
+            if(A[ai - 1] <= B[bi]){
+                diag_A[threadIdx.x] = ai;
+                diag_B[threadIdx.x] = bi;
+            } else {
+                atop = ai - 1;
+                btop = bi + 1; 
+            }
+        } else {
+            abot = ai + 1;
+        }
+    }
+
+}
 
 /*
 __global__ void odd_even_merge_sort(float *d_input){
@@ -76,6 +139,16 @@ __global__ void odd_even_merge_sort(float *d_input){
     d_input[idx] = s_data[threadIdx.x];
 
 }
+*/
+
+
+
+/*
+    starting with the merge path from length 1 arrays is a bit overkill...
+    what we do is a bitonic sort getting a collection of 32 size sorted arrays, we start merging these
+    we will need log N - log 32 merging steps
+    why 32? fits nicely with the warpsize - no synchronisation needed and gives us ability to use warp shuffle functions
+
 */
 
 __device__ float swap(int x, int mask, int dir){
@@ -139,20 +212,25 @@ void cuda_interface_sort(float* d_input){
     printf( "warpsize bitonic sort: %.8f ms\n", elapsed_time);
 
 
-    /*float *diag_A, *diag_B;
-    cudaMalloc((void **)&diag_A, BLOCKSIZE2 * GRIDSIZE2 * sizeof(float));
-    cudaMalloc((void **)&diag_B, BLOCKSIZE2 * GRIDSIZE2 * sizeof(float));*/
+    float *diag_A, *diag_B;
+    cudaMalloc((void **)&diag_A, GRIDSIZE2 * sizeof(float));
+    cudaMalloc((void **)&diag_B, GRIDSIZE2 * sizeof(float));
 
-    /*cudaEventRecord(start, 0);
+    cudaEventRecord(start, 0);
 
-    for(int i = LOG2BLOCKSIZE1; i <= LOG2ARR_SIZE; i++)
-        merge_sort<<<GRIDSIZE1, BLOCKSIZE1>>>(d_input, (1 << i));
+    for(int i = LOG2BLOCKSIZE1; i <= LOG2ARR_SIZE; i++){
+        // do some if elses
+        // grid partition
+        // merge
+
+    }
+        //merge_sort<<<GRIDSIZE1, BLOCKSIZE1>>>(d_input, (1 << i));
     
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsed_time, start, stop);
     total_time += elapsed_time;
-    printf( "merge sort using merge path: %.8f ms\n", elapsed_time);*/
+    printf( "merge sort using merge path: %.8f ms\n", elapsed_time);
 
     printf("total time:%f\n", total_time);
 
