@@ -12,8 +12,11 @@
 
 #define BLOCKSIZE2 (1 << 5)
 #define GRIDSIZE2 (1 << 8)
-#define SMEM_SIZE 512
-#define Stride 16
+#define STRIDE_THREAD 16 // each thread processes 16 elements
+#define STRIDE_BLOCK (1 << 11) // each block processes N/gridsize elements/2 elements of A and elements of B (arrs to merge)
+#define SMEM_SIZE 256
+#define REFILL_LOADS 8 // times we have to refill SMEM = 2^11 elements / 256
+#define SMEM_LOADS 8 // 32 threads, 256 smem, need to read 8 times
 
 /*
     merge path configuration:
@@ -46,7 +49,19 @@
         128 total elements(A+B) / 16 elements per thread = 8 threads per pair
         -> 4 pairs total
 
+    ...
+
     at 8) we start will need 2 blocks for a pair -> will need grid_partition_path
+
+*/
+
+
+/*
+
+    Problem: we don't know which 512 elements the block is processing, could be 512 from A and 0 from B, 256/256, 100/412 ...
+    we can't just load 256/256 each time... 
+
+    solution:
 
 */
 
@@ -56,10 +71,33 @@ __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *
     
 }
 
-__global__ void merge_sort(float *d_input, int length, float *diag_A, float *diag_B){
+// warp size block, no need for synchthreads
+__global__ void merge_sort(float *d_input, int length, int *diag_A, int *diag_B){
+
+    __shared__ float A[SMEM_SIZE];
+    __shared__ float B[SMEM_SIZE];
+
+    int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
+
+    #pragma unroll
+    for(int i = 0; i < REFILL_LOADS; i++){ // 8 times per smem
+
+        #pragma unroll
+        for(int j = 0; j < SMEM_LOADS; j++){ // 8 times per thread (8 not 16 = 8 from A + 8 from B)
+
+            A[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
+            B[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
+
+        }
+
+        // x,y point in diagonal
+        int starting_A = diag_A[blockIdx.x];
+        int starting_B = diag_B[blockIdx.x];
 
 
 
+
+    }
 }
 
 
@@ -78,10 +116,10 @@ __global__ void merge_sort(float *d_input, int length, float *diag_A, float *dia
 
 // gets called onyl when more than 1 block is needed to process the arrays
 // 1 block 256 threads
-__global__ void grid_partition_path(float *d_input, float *diag_A, float *diag_B, int length, int blocksperarray){
+__global__ void grid_partition_path(float *d_input, int *diag_A, int *diag_B, int length, int blocksperarray){
 
     // get where in d_input we are
-    //d_input += something;
+    d_input += threadIdx.x * STRIDE_BLOCK;
     
     float *A = d_input;
     float *B = d_input + length;
@@ -239,7 +277,7 @@ void cuda_interface_sort(float* d_input){
     printf( "warpsize bitonic sort: %.8f ms\n", elapsed_time);
 
 
-    float *diag_A, *diag_B;
+    int *diag_A, *diag_B;
     cudaMalloc((void **)&diag_A, GRIDSIZE2 * sizeof(float));
     cudaMalloc((void **)&diag_B, GRIDSIZE2 * sizeof(float));
 
