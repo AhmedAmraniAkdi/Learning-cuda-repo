@@ -12,16 +12,43 @@
 
 #define BLOCKSIZE2 (1 << 5)
 #define GRIDSIZE2 (1 << 8)
+#define SMEM_SIZE 512
+#define Stride 16
 
 /*
     merge path configuration:
 
+    ok, hear me out on this one :
 
+    256 blocks of 32 threads
+    
+    64Kb of smem per sm, 5 sm, 
+    we will take 512 smem elems per block making it 256 elements of A, and 256 elements of B
 
+    we will take a stride of 16 elements per thread
 
+    0) first iteration
+        we start merging arrays of length 32 , that makes it 2^14 pairs to sort
+        2^6 pairs per block
+        2^11 (x32) elements of A's and 2^11 elements of B's - at 256 elements smem's 
+        -> 8 loads of A's and B's and 8 pairs fit per iter (256/32)
+
+        512 total elements on 1 load / 32 threads = 16 elements per thread = stride -> all smem consumed on 1 iteration
+
+        64 total elements(A+B) / 16 elements per thread = 4 threads per pair
+        -> 8 pairs total (32 threads)
+
+    1) second iteration
+        length 64, 2^13 pairs
+        2^5 pairs per block
+        2^11 elements of A's and 2^11 B's, 8 loads
+
+        128 total elements(A+B) / 16 elements per thread = 8 threads per pair
+        -> 4 pairs total
+
+    at 8) we start will need 2 blocks for a pair -> will need grid_partition_path
 
 */
-
 
 __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *B, int start_b, int end_b){
 
@@ -80,8 +107,8 @@ __global__ void grid_partition_path(float *d_input, float *diag_A, float *diag_B
         ai = atop - offset;
         bi = btop + offset;
 
-        if (A[ai] > B[bi - 1]){
-            if(A[ai - 1] <= B[bi]){
+        if (ai >= 0 && bi <= length && (A[ai] > B[bi - 1] || ai == length || bi == 0)){
+            if((A[ai - 1] <= B[bi] || ai == 0 || bi == length)){
                 diag_A[threadIdx.x] = ai;
                 diag_B[threadIdx.x] = bi;
             } else {
