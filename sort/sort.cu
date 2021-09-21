@@ -61,7 +61,36 @@
     Problem: we don't know which 512 elements the block is processing, could be 512 from A and 0 from B, 256/256, 100/412 ...
     we can't just load 256/256 each time... 
 
-    solution:
+    solution: have 1 array of smem with 512 size, we fill it, keep track where A ends and B starts and keep track for the next offsets x, y for the next iteration
+    we could have both A, B 512 size smem arrays but we waste smem + could possibly go over the smem limit
+
+    this doesn't change the calculations done in the previous comment.
+
+    But!!!! yes, we have where to start loading but ... when to stop?
+
+    what we will do is: 
+    
+    1-for L sized segment we need at most L of A and at most B L, but only L elements will be consumed, yes?
+    we load L from A, L from B, the last thread gives us the new starting point and we might read the same data again.
+
+    2-we can also use grid_partition_path but we increase A_diag and B_diag and find diagonal point for each smem size
+
+    which one is better?
+
+    1- L sized path needs L elements, we are reading 2L elements, so we will be rereading L elements every time but on coalesced manner!
+    + only starts becoming an issue when the arrays to merge don't fit completly on smem, so size 512 A and 512 B
+    + possibility to just move the unused items to the start of the arrays instead of rereading (*)
+    + check for when either A or B are fully consumed and just start filling with the unfinished array?
+    let's say we don't do (*) for 512 sized array, we have 2^10 total pairs, for each pair we read 2*512 elements again, 
+    which means we reread the whole array again so N reads - it's 4 am, maybe there is a mistake, but the logic is correct... i believe
+
+    2- A_diag and B_diag become N/SMEM = 2^20/2^9 from 2^8, that's 8 times more and we have to call this kernel many times more
+    reads are reaaaly uncoalesced, which means they are serialised -> x32 the number of each warpsize read
+    + only starts becoming an issue when the arrays to merge don't fit completly on smem, so size 512 A and 512 B
+    paper said we need at most log (size Array) to find partition point ... so total 2^11 * 20 * 32 .. bigger than (1)
+
+    we will stick to 1 and move elements instead of refilling.
+
 
 */
 
@@ -74,8 +103,7 @@ __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *
 // warp size block, no need for synchthreads
 __global__ void merge_sort(float *d_input, int length, int *diag_A, int *diag_B){
 
-    __shared__ float A[SMEM_SIZE];
-    __shared__ float B[SMEM_SIZE];
+    __shared__ float A_B[SMEM_SIZE * 2];
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
@@ -85,8 +113,8 @@ __global__ void merge_sort(float *d_input, int length, int *diag_A, int *diag_B)
         #pragma unroll
         for(int j = 0; j < SMEM_LOADS; j++){ // 8 times per thread (8 not 16 = 8 from A + 8 from B)
 
-            A[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
-            B[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
+            diag_A[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
+            diag_B[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
 
         }
 
@@ -129,32 +157,33 @@ __global__ void grid_partition_path(float *d_input, int *diag_A, int *diag_B, in
     if(threadIdx.x & (blocksperarray - 1)){
         diag_A[threadIdx.x] = 0;
         diag_B[threadIdx.x] = 0;
-    }
+    } else {
     
-    int diag = (threadIdx.x + 1) * length * 2 / blockDim.x;
-    int atop = diag > length ? length : diag;
-    int btop = diag > length ? diag - length : 0;
-    int abot = btop;
+        int diag = (threadIdx.x + 1) * length * 2 / blockDim.x;
+        int atop = diag > length ? length : diag;
+        int btop = diag > length ? diag - length : 0;
+        int abot = btop;
 
-    int ai, bi;
-    int offset;
+        int ai, bi;
+        int offset;
 
-    while(1){
+        while(1){
 
-        offset = (atop - abot)/2;
-        ai = atop - offset;
-        bi = btop + offset;
+            offset = (atop - abot)/2;
+            ai = atop - offset;
+            bi = btop + offset;
 
-        if (ai >= 0 && bi <= length && (A[ai] > B[bi - 1] || ai == length || bi == 0)){
-            if((A[ai - 1] <= B[bi] || ai == 0 || bi == length)){
-                diag_A[threadIdx.x] = ai;
-                diag_B[threadIdx.x] = bi;
+            if (ai >= 0 && bi <= length && (A[ai] > B[bi - 1] || ai == length || bi == 0)){
+                if((A[ai - 1] <= B[bi] || ai == 0 || bi == length)){
+                    diag_A[threadIdx.x] = ai;
+                    diag_B[threadIdx.x] = bi;
+                } else {
+                    atop = ai - 1;
+                    btop = bi + 1; 
+                }
             } else {
-                atop = ai - 1;
-                btop = bi + 1; 
+                abot = ai + 1;
             }
-        } else {
-            abot = ai + 1;
         }
     }
 
