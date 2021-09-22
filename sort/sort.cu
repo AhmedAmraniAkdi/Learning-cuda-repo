@@ -15,6 +15,7 @@
 #define STRIDE_THREAD 16 // each thread processes 16 elements
 #define STRIDE_BLOCK (1 << 11) // each block processes N/gridsize elements/2 elements of A and elements of B (arrs to merge)
 #define SMEM_SIZE 256
+#define LOG2SMEM 8
 #define REFILL_LOADS 8 // times we have to refill SMEM = 2^11 elements / 256
 #define SMEM_LOADS 8 // 32 threads, 256 smem, need to read 8 times
 
@@ -91,43 +92,73 @@
 
     we will stick to 1 and move elements instead of refilling.
 
-
 */
+
+// (**) reminder, check for when either A or B are fully consumed and then just directly merge the remaining items of the other array
 
 __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *B, int start_b, int end_b){
 
+    float item_A = A[start_a];
+    float item_B = B[start_b];
 
+    #pragma unroll
+    for(int i = 0; i < STRIDE_THREAD; i++){
+
+        bool p = (start_b < end_b) && ((start_a >= end_a) || item_B >= item_A);
+
+        if(p){
+            dest[i] = item_B; 
+            item_B = B[++start_b];  
+        } else {
+            dest[i] = item_A;
+            item_A = B[++start_a]; 
+        }
+
+    }
     
 }
 
-// warp size block, no need for synchthreads
-__global__ void merge_sort(float *d_input, int length, int *diag_A, int *diag_B){
+/*
 
-    __shared__ float A_B[SMEM_SIZE * 2];
+    we will have 3 similar merge sorts :
+    1- for when arrays A, B fit into smem so size <256
+    2- arrays A and B don't fit so size >=512
+    3- when size is > 2^11, 2 or more blocks needed for the A and B
+
+    why? keep code cleaner
+
+*/
+
+
+__global__ void merge_sort_small(float *d_input, int length){
+
+    __shared__ float A[SMEM_SIZE + 1]; // stride 16, so thread 0 reades bank 0, thread 1 at bank 16, thread 2 at bank 0,
+    __shared__ float B[SMEM_SIZE + 1]; // bank conflict, +1 padding for no conflicts, t0 0, t1 16, t2 1 ... accessing same index doesn't cause conflict
+    __shared__ float Out[SMEM_SIZE + 1]; // for coalesced writing
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
-    #pragma unroll
-    for(int i = 0; i < REFILL_LOADS; i++){ // 8 times per smem
-
-        #pragma unroll
-        for(int j = 0; j < SMEM_LOADS; j++){ // 8 times per thread (8 not 16 = 8 from A + 8 from B)
-
-            diag_A[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
-            diag_B[threadIdx.x + j * STRIDE_THREAD / 2] = d_input[idx + i * SMEM_SIZE + j * STRIDE_THREAD / 2];
-
-        }
-
-        // x,y point in diagonal
-        int starting_A = diag_A[blockIdx.x];
-        int starting_B = diag_B[blockIdx.x];
-
-
-
-
-    }
 }
 
+__global__ void merge_sort_medium(float *d_input, int length){
+
+    __shared__ float A[SMEM_SIZE + 1]; // stride 16, so thread 0 reades bank 0, thread 1 at bank 16, thread 2 at bank 0,
+    __shared__ float B[SMEM_SIZE + 1]; // bank conflict, +1 padding for no conflicts, t0 0, t1 16, t2 1 ... accessing same index doesn't cause conflict
+    __shared__ float Out[SMEM_SIZE + 1]; // for coalesced writing
+
+    int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
+
+}
+
+__global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
+
+    __shared__ float A[SMEM_SIZE + 1]; // stride 16, so thread 0 reades bank 0, thread 1 at bank 16, thread 2 at bank 0,
+    __shared__ float B[SMEM_SIZE + 1]; // bank conflict, +1 padding for no conflicts, t0 0, t1 16, t2 1 ... accessing same index doesn't cause conflict
+    __shared__ float Out[SMEM_SIZE + 1]; // for coalesced writing
+
+    int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
+
+}
 
 /*
     ok, so what's the problem... imagine we are merging 2 sorted arrays A and B...
@@ -144,7 +175,7 @@ __global__ void merge_sort(float *d_input, int length, int *diag_A, int *diag_B)
 
 // gets called onyl when more than 1 block is needed to process the arrays
 // 1 block 256 threads
-__global__ void grid_partition_path(float *d_input, int *diag_A, int *diag_B, int length, int blocksperarray){
+__global__ void grid_partition_path(float *d_input, int length, int *diag_A, int *diag_B, int blocksperarray){
 
     // get where in d_input we are
     d_input += threadIdx.x * STRIDE_BLOCK;
@@ -311,14 +342,24 @@ void cuda_interface_sort(float* d_input){
     cudaMalloc((void **)&diag_B, GRIDSIZE2 * sizeof(float));
 
     cudaEventRecord(start, 0);
-
-    for(int i = LOG2BLOCKSIZE1; i <= LOG2ARR_SIZE; i++){
-        // do some if elses
-        // grid partition
-        // merge
-
+    
+    // 32 -> 256 (inclusive)
+    for(int i = LOG2BLOCKSIZE1; i <= LOG2SMEM; i++){
+        merge_sort_small<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i);
     }
-        //merge_sort<<<GRIDSIZE1, BLOCKSIZE1>>>(d_input, (1 << i));
+    // 256 -> 1024 (inclusive)
+    for(int i = LOG2SMEM + 1; i <= 10; i++){
+        merge_sort_medium<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i);
+    }
+    // 2048 -> N/2
+    int blocksperarray = 2;
+    for(int i = STRIDE_BLOCK; i <= LOG2ARR_SIZE - 1; i++){
+        grid_partition_path<<<1, GRIDSIZE2>>>(d_input, 1 << i, diag_A, diag_B, blocksperarray);
+        merge_sort_large<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i, diag_A, diag_B);
+        blocksperarray <<= 1;
+    }
+
+    //merge_sort<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 0, diag_A, diag_B);
     
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);

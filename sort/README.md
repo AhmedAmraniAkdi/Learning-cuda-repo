@@ -1,3 +1,5 @@
+##Merge Path implementation:
+
 Sorting array of floats on Cuda, the idea is as follows: each block will use warp size bitonic sort, this will leave us with length/32 sorted lists that we will merge using merge Path, and keep merging them pair by pair, until we are left with a sorted array.
 
 References:
