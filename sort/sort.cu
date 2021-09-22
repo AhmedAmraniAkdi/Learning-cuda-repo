@@ -14,6 +14,7 @@
 #define GRIDSIZE2 (1 << 8)
 #define STRIDE_THREAD 16 // each thread processes 16 elements
 #define STRIDE_BLOCK (1 << 11) // each block processes N/gridsize elements/2 elements of A and elements of B (arrs to merge)
+#define LOG2STRIDEBLOCK 11
 #define SMEM_SIZE 256
 #define LOG2SMEM 8
 #define REFILL_LOADS 8 // times we have to refill SMEM = 2^11 elements / 256
@@ -129,22 +130,94 @@ __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *
 
 */
 
+/*
+
+    each new kernell call, the number of threads per pair x2 and the number of pairs /2
+
+*/
+
 
 __global__ void merge_sort_small(float *d_input, int length){
 
     __shared__ float A[SMEM_SIZE + 1]; // stride 16, so thread 0 reades bank 0, thread 1 at bank 16, thread 2 at bank 0,
     __shared__ float B[SMEM_SIZE + 1]; // bank conflict, +1 padding for no conflicts, t0 0, t1 16, t2 1 ... accessing same index doesn't cause conflict
-    __shared__ float Out[SMEM_SIZE + 1]; // for coalesced writing
+    __shared__ float Out[SMEM_SIZE * 2 + 1]; // for coalesced writing 
+
+    // occupancy calculator says no problem with these amounts of smem and registers
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
+
+    int swap = length/BLOCKSIZE2;
+
+    float *temp_A, *temp_B;
+
+    int threadsperpair = length * 2 / BLOCKSIZE2; // 4, 8, 16
+
+    int threadIdx_perpair = threadIdx.x & (threadIdx_perpair - 1);
+
+    #pragma unroll
+    for(int i = 0; i < REFILL_LOADS; i++){
+
+        #pragma unroll
+        for(int j = 0; j < SMEM_LOADS * 2; j++){ // 8 for A, 8 for B
+
+            temp_A = A, temp_B = B;
+            if(swap & j){ // every other swap elements we switch to B
+                temp_A[threadIdx.x] = d_input[idx + i * SMEM_SIZE + j * BLOCKSIZE2];
+                temp_A += BLOCKSIZE2;
+            } else {
+                temp_B[threadIdx.x] = d_input[idx + i * SMEM_SIZE + j * BLOCKSIZE2];
+                temp_B += BLOCKSIZE2;
+            }
+
+        }
+
+        int diag = (threadIdx_perpair + 1) * length * 2 / BLOCKSIZE2; // diagonal relative to how many threads process a block
+        int atop = diag > length ? length : diag;
+        int btop = diag > length ? diag - length : 0;
+        int abot = btop;
+
+        temp_A = A + threadIdx.x / threadsperpair; // 4 first threads first block, 4 second threads second block etc.
+        temp_B = B + threadIdx.x / threadsperpair;
+        
+        int ai, bi;
+        int offset;
+
+        int x1, y1;
+
+        while(1){
+
+            offset = (atop - abot)/2;
+            ai = atop - offset;
+            bi = btop + offset;
+
+            if (ai >= 0 && bi <= length && (temp_A[ai] > temp_B[bi - 1] || ai == length || bi == 0)){
+                if((temp_A[ai - 1] <= temp_B[bi] || ai == 0 || bi == length)){
+                    x1 = ai;
+                    y1 = bi;
+                } else {
+                    atop = ai - 1;
+                    btop = bi + 1; 
+                }
+            } else {
+                abot = ai + 1;
+            }
+        }
+        
+        // we found the points, now we merge
+        // look at that slick warp shuffle
+        int x2 = threadIdx_perpair == threadsperpair - 1 ? length : __shfl_sync(0xffffffff, x1, threadIdx.x + 1);
+        int y2 = threadIdx_perpair == threadsperpair - 1 ? length : __shfl_sync(0xffffffff, x2, threadIdx.x + 1);
+        seq_merge(Out + threadsperpair * STRIDE_THREAD, temp_A, x1, x2, temp_B, y1, y2);
+    }
 
 }
 
 __global__ void merge_sort_medium(float *d_input, int length){
 
-    __shared__ float A[SMEM_SIZE + 1]; // stride 16, so thread 0 reades bank 0, thread 1 at bank 16, thread 2 at bank 0,
-    __shared__ float B[SMEM_SIZE + 1]; // bank conflict, +1 padding for no conflicts, t0 0, t1 16, t2 1 ... accessing same index doesn't cause conflict
-    __shared__ float Out[SMEM_SIZE + 1]; // for coalesced writing
+    __shared__ float A[SMEM_SIZE + 1]; 
+    __shared__ float B[SMEM_SIZE + 1]; 
+    __shared__ float Out[SMEM_SIZE + 1];
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
@@ -152,9 +225,9 @@ __global__ void merge_sort_medium(float *d_input, int length){
 
 __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
 
-    __shared__ float A[SMEM_SIZE + 1]; // stride 16, so thread 0 reades bank 0, thread 1 at bank 16, thread 2 at bank 0,
-    __shared__ float B[SMEM_SIZE + 1]; // bank conflict, +1 padding for no conflicts, t0 0, t1 16, t2 1 ... accessing same index doesn't cause conflict
-    __shared__ float Out[SMEM_SIZE + 1]; // for coalesced writing
+    __shared__ float A[SMEM_SIZE + 1]; 
+    __shared__ float B[SMEM_SIZE + 1]; 
+    __shared__ float Out[SMEM_SIZE + 1]; 
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
@@ -348,7 +421,7 @@ void cuda_interface_sort(float* d_input){
         merge_sort_small<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i);
     }
     // 256 -> 1024 (inclusive)
-    for(int i = LOG2SMEM + 1; i <= 10; i++){
+    for(int i = LOG2SMEM + 1; i <= LOG2STRIDEBLOCK - 1; i++){
         merge_sort_medium<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i);
     }
     // 2048 -> N/2
@@ -359,7 +432,6 @@ void cuda_interface_sort(float* d_input){
         blocksperarray <<= 1;
     }
 
-    //merge_sort<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 0, diag_A, diag_B);
     
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
