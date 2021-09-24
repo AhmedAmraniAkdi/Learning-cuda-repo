@@ -9,7 +9,7 @@ INCSAMPLES_H = -I "C:\ProgramData\NVIDIA Corporation\CUDA Samples\v11.0\common\i
 all: remove sort
 
 sort:
-	nvcc -arch=sm_50 sort.cu -o sort.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v
+	nvcc -arch=sm_50 sort.cu -o sort.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v -lineinfo
 
 #debug binary for mem check
 debug:

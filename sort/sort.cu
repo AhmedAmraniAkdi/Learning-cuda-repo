@@ -248,97 +248,80 @@ __global__ void merge_sort_small(float *d_input, int length){
 
 }
 
-/*__device__ void move_and_refill(int i_pair, int j_pairload, float *A, float *B, int unconsumed_A, int unconsumed_B, int load_start_A, int load_start_B){
-            // refill
-            #pragma unroll
-            for(int k = 0; k < SMEM_LOADS; k++){ // 8 for A, 8 for B
-                A[threadIdx.x +  + k * BLOCKSIZE] = load_start_A == length ? FLT_MAX : d_input[idx + i * length * 2 + load_start_A + k * BLOCKSIZE];
-            }
+__device__ void move_and_refill(float *d_input, int i_pair, int j_L_Load, float *A, float *B, int offset_smem_A, int offset_smem_B, int length){
 
-            // move non consumed items to start of smem // better than reading from global memory
-            if(unconsumed_A){
-                int k = 0;
-                unconsumed_A += threadIdx.x;
-                while(unconsumed_A < SMEM_SIZE){
-                    A[threadIdx.x + k * BLOCKSIZE] = A[unconsumed_A];
-                    unconsumed_A += BLOCKSIZE;
-                    k++;
-                }
-            }
+    // don't know if the pragmas unroll work here
 
-            // same for B
-            if(unconsumed_B){
-                int k = 0;
-                unconsumed_B += threadIdx.x;
-                while(unconsumed_B < SMEM_SIZE){
-                    B[threadIdx.x + k * BLOCKSIZE] = B[unconsumed_B];
-                    unconsumed_B += BLOCKSIZE;
-                    k++;
-                }
-            }
+    // move 
+    #pragma unroll
+    for(int i = threadIdx.x; i < offset_smem_A; i += BLOCKSIZE){
+        A[i] = A[SMEM_SIZE - offset_smem_A + i];
+    }
+    #pragma unroll
+    for(int i = threadIdx.x; i < offset_smem_B; i += BLOCKSIZE){
+        B[i] = B[SMEM_SIZE - offset_smem_B + i];
+    }
+    
+    int gmem_offset = blockIdx.x * STRIDE_BLOCK + i_pair * length + j_L_Load * SMEM_SIZE;
+    // refill
+    #pragma unroll
+    for(int i = threadIdx.x + offset_smem_A; i < SMEM_SIZE; i += BLOCKSIZE){
+        A[i] = (j_L_Load * SMEM_SIZE + i > length)? FLT_MAX : d_input[gmem_offset - offset_smem_A + i];
+    }
+    #pragma unroll
+    for(int i = threadIdx.x + offset_smem_B; i < SMEM_SIZE; i += BLOCKSIZE){
+        B[i] = (j_L_Load * SMEM_SIZE + i > length)? FLT_MAX : d_input[gmem_offset - offset_smem_B + i];
+    }
 
-            #pragma unroll
-            for(int k = 0; k < SMEM_LOADS; k++){ // 8 for A, 8 for B
-                B[threadIdx.x + j * BLOCKSIZE] = d_input[idx + i * SMEM_SIZE * 2 + j * BLOCKSIZE];
-            }
 
-}*/
+}
 
-/*
+
 // we add refilling
-// first iter: length 512, 1024 pairs, 4 pairs per block and 32 threads per half pair
+// first iter: length 512, 1024 pairs, 4 pairs per block
+// as we said, L A and L B gives L Out, so 1024/256 = 4 iters
+// each thread processes STRIDE_THREAD/2 bcs now we have half Out per iter
 __global__ void merge_sort_medium(float *d_input, int length){
 
-    __shared__ float A[SMEM_SIZE + 1]; 
+    __shared__ float A[SMEM_SIZE + 1];
     __shared__ float B[SMEM_SIZE + 1]; 
-    __shared__ float Out[SMEM_SIZE + 1]; 
+    __shared__ float Out[SMEM_SIZE + 1];
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
-    
-    int load_start_A, load_start_B; // at which offset to start loading relative to the length x length block
 
-    int loads_per_pair = length * 2 / SMEM_SIZE; // loading smem A, smem B, gives smem out, final out is of size length * 2
+    int offset_smem_A, offset_smem_B; // offset due to non consumed items on smem
 
     int pairs_per_block = length * 2 / GRIDSIZE2;
 
-    int unconsumed_A, unconsumed_B; // at which offset the unconsumed items start
-
-
     #pragma unroll
     for(int i = 0; i < pairs_per_block; i++){
-
-        load_start_A = 0; 
-        load_start_B = 0;
-        unconsumed_A = 0; 
-        unconsumed_B = 0;
-
+        offset_smem_A = 0, offset_smem_B = 0;
+        
         #pragma unroll
-        for(int j = 0; j < loads_per_pair; j++){
+        for(int j = 0; j < length * 2 / SMEM_SIZE; j++){
+        // move unconsumed items and refill from global mem
+            move_and_refill(d_input, i, j, A, B, offset_smem_A, offset_smem_B, length * 2);
 
-            // move and refill
-
-            move_and_refill(i, j, A, B, unconsumed_A, unconsumed_B, load_start_A, load_start_B);
-
-            int diag = (threadIdx.x + 1) * SMEM_SIZE / BLOCKSIZE; 
-            int atop = diag > SMEM_SIZE ? SMEM_SIZE : diag;
-            int btop = diag > SMEM_SIZE ? diag - SMEM_SIZE : 0;
+            int diag = (threadIdx.x + 1) * SMEM_SIZE / BLOCKSIZE; // diagonal relative L A, L B loaded on smem
+            int atop = diag;
+            int btop = 0;
             int abot = btop;
-
+            
             int ai, bi;
             int offset;
 
-            int x1, y1;
+            int x2, y2;
 
             while(1){
-
                 offset = (atop - abot)/2;
                 ai = atop - offset;
                 bi = btop + offset;
 
-                if (ai >= 0 && bi <= length && (A[ai] > B[bi - 1] || ai == length || bi == 0)){
-                    if((A[ai - 1] <= B[bi] || ai == 0 || bi == length)){
-                        x1 = ai;
-                        y1 = bi;
+                if (ai >= length || bi == 0 || A[ai] > B[bi - 1]){
+                    if(ai == 0 || bi >= length || A[ai - 1] <= B[bi]){
+                        x2 = ai;
+                        y2 = bi;
+                        break;
                     } else {
                         atop = ai - 1;
                         btop = bi + 1; 
@@ -348,20 +331,28 @@ __global__ void merge_sort_medium(float *d_input, int length){
                 }
             }
 
-            int x2 = __shfl_sync(0xffffffff, x1, threadIdx.x + 1);
-            int y2 = __shfl_sync(0xffffffff, x2, threadIdx.x + 1);
-            seq_merge(Out + threadIdx.x * STRIDE_THREAD / 2, A, x1, x2, B, y1, y2); // L A, L B, gives us L out, so half stride
+            // we found the points, now we merge
+            // look at that slick warp shuffle
+            int x1 = __shfl_sync(0xffffffff, x2, threadIdx.x - 1);
+            int y1 = __shfl_sync(0xffffffff, y2, threadIdx.x - 1);
+            x1 = threadIdx.x == 0 ? 0 : x1;
+            y1 = threadIdx.x == 0 ? 0 : y1;
+
+            offset_smem_A = SMEM_SIZE - __shfl_sync(0xffffffff, x2, 31);
+            offset_smem_B = SMEM_SIZE - __shfl_sync(0xffffffff, y2, 31);
+
+            seq_merge(Out + threadIdx.x * STRIDE_THREAD / 2, A, x1, x2, B, y1, y2);
 
             #pragma unroll
-            for(int k = 0; k <= SMEM_SIZE/ BLOCKSIZE; k++){
-                d_input[idx + i * length * 2 + j * BLOCKSIZE] = Out[j * BLOCKSIZE];
+            for(int k = 0; k < SMEM_LOADS; k++){
+                d_input[idx + i * length * 2 + j * SMEM_SIZE] = Out[k * BLOCKSIZE + threadIdx.x];
             }
 
         }
 
     }
 
-}*/
+}
 
 /*
 __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
