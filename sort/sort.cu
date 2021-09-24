@@ -5,16 +5,16 @@
 
 
 #define ARR_SIZE (1 << 20)
-#define BLOCKSIZE1 (1 << 5)
+#define WARPSIZE (1 << 5)
 #define GRIDSIZE1 (1 << 15)
-#define LOG2BLOCKSIZE1 5
+#define LOG2WARPSIZE 5
 #define LOG2ARR_SIZE 20
 
-#define BLOCKSIZE2 (1 << 5)
+#define BLOCKSIZE (1 << 5)
 #define GRIDSIZE2 (1 << 8)
 #define STRIDE_THREAD 16 // each thread processes 16 elements
-#define STRIDE_BLOCK (1 << 11) // each block processes N/gridsize elements/2 elements of A and elements of B (arrs to merge)
-#define LOG2STRIDEBLOCK 11
+#define STRIDE_BLOCK (1 << 12) // each block processes N/gridsize elements/2 elements of A and elements of B (arrs to merge)
+#define LOG2STRIDEBLOCK 12
 #define SMEM_SIZE 256
 #define LOG2SMEM 8
 #define REFILL_LOADS 8 // times we have to refill SMEM = 2^11 elements / 256
@@ -36,7 +36,7 @@
         we start merging arrays of length 32 , that makes it 2^14 pairs to sort
         2^6 pairs per block
         2^11 (x32) elements of A's and 2^11 elements of B's - at 256 elements smem's 
-        -> 8 loads of A's and B's and 8 pairs fit per iter (256/32)
+        -> 8 loads of A's and B's and 8 pairs fit  (256/32)
 
         512 total elements on 1 load / 32 threads = 16 elements per thread = stride -> all smem consumed on 1 iteration
 
@@ -105,14 +105,16 @@ __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *
     #pragma unroll
     for(int i = 0; i < STRIDE_THREAD; i++){
 
-        bool p = (start_b < end_b) && ((start_a >= end_a) || item_B >= item_A);
+        bool p = (start_b < end_b) && ((start_a >= end_a) || item_B <= item_A);
 
         if(p){
-            dest[i] = item_B; 
-            item_B = B[++start_b];  
+            dest[i] = item_B;
+            start_b++;
+            item_B = B[start_b];  
         } else {
             dest[i] = item_A;
-            item_A = B[++start_a]; 
+            start_a++;
+            item_A = A[start_a]; 
         }
 
     }
@@ -128,6 +130,11 @@ __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *
 
     why? keep code cleaner
 
+    take (maybe i'm wrong): there won't always be enough shared memory, 
+    and always have the case of more than 1 block processing 1 pair
+
+    we can however play around the sizes to have more of a case than another
+
 */
 
 /*
@@ -135,7 +142,6 @@ __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *
     each new kernell call, the number of threads per pair x2 and the number of pairs /2
 
 */
-
 
 __global__ void merge_sort_small(float *d_input, int length){
 
@@ -147,82 +153,217 @@ __global__ void merge_sort_small(float *d_input, int length){
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
-    int swap = length/BLOCKSIZE2;
+    int swap = length/BLOCKSIZE;
 
-    float *temp_A, *temp_B;
+    int offset_A, offset_B;
 
-    int threadsperpair = length * 2 / BLOCKSIZE2; // 4, 8, 16
+    int threadsperpair = length * 2 / STRIDE_THREAD; // 4, 8, 16
 
-    int threadIdx_perpair = threadIdx.x & (threadIdx_perpair - 1);
+    int threadIdx_perpair = threadIdx.x & (threadsperpair - 1);
 
     #pragma unroll
     for(int i = 0; i < REFILL_LOADS; i++){
-
+        offset_A = 0, offset_B = 0;
         #pragma unroll
         for(int j = 0; j < SMEM_LOADS * 2; j++){ // 8 for A, 8 for B
-
-            temp_A = A, temp_B = B;
             if(swap & j){ // every other swap elements we switch to B
-                temp_A[threadIdx.x] = d_input[idx + i * SMEM_SIZE + j * BLOCKSIZE2];
-                temp_A += BLOCKSIZE2;
+                B[offset_B + threadIdx.x] = d_input[idx + i * SMEM_SIZE * 2 + j * BLOCKSIZE];
+                offset_B += BLOCKSIZE;
+
             } else {
-                temp_B[threadIdx.x] = d_input[idx + i * SMEM_SIZE + j * BLOCKSIZE2];
-                temp_B += BLOCKSIZE2;
+                A[offset_A + threadIdx.x] = d_input[idx + i * SMEM_SIZE * 2 + j * BLOCKSIZE];
+                offset_A += BLOCKSIZE;
             }
 
         }
 
-        int diag = (threadIdx_perpair + 1) * length * 2 / BLOCKSIZE2; // diagonal relative to how many threads process a block
-        int atop = diag > length ? length : diag;
-        int btop = diag > length ? diag - length : 0;
-        int abot = btop;
 
-        temp_A = A + threadIdx.x / threadsperpair; // 4 first threads first block, 4 second threads second block etc.
-        temp_B = B + threadIdx.x / threadsperpair;
-        
-        int ai, bi;
-        int offset;
+        /*if(i == 0 && threadIdx.x == 0 && blockIdx.x == 0){
+            for(int j = 0; j < 256; j++){
+                printf("%f %f\n", A[j], B[j]);
+            }
+        }*/
 
-        int x1, y1;
+        int x2 = length, y2 = length;
+        offset_A = threadIdx.x / threadsperpair * length; // 4 first threads first block, 4 second threads second block etc.
+        offset_B = threadIdx.x / threadsperpair * length;
 
-        while(1){
+        if(threadIdx_perpair != (threadsperpair - 1)){
+            int diag = (threadIdx_perpair + 1) * length * 2 / threadsperpair; // diagonal relative to how many threads process a block
+            int atop = diag > length ? length : diag;
+            int btop = diag > length ? diag - length : 0;
+            int abot = btop;
+            
+            int ai, bi;
+            int offset;
 
-            offset = (atop - abot)/2;
-            ai = atop - offset;
-            bi = btop + offset;
+            while(1){
+                offset = (atop - abot)/2;
+                ai = atop - offset;
+                bi = btop + offset;
 
-            if (ai >= 0 && bi <= length && (temp_A[ai] > temp_B[bi - 1] || ai == length || bi == 0)){
-                if((temp_A[ai - 1] <= temp_B[bi] || ai == 0 || bi == length)){
-                    x1 = ai;
-                    y1 = bi;
+                if (ai >= length || bi == 0 || A[offset_A + ai] > B[offset_B + bi - 1]){
+                    if(ai == 0 || bi >= length || A[offset_A + ai - 1] <= B[offset_B + bi]){
+                        x2 = ai;
+                        y2 = bi;
+                        break;
+                    } else {
+                        atop = ai - 1;
+                        btop = bi + 1; 
+                    }
                 } else {
-                    atop = ai - 1;
-                    btop = bi + 1; 
+                    abot = ai + 1;
                 }
-            } else {
-                abot = ai + 1;
             }
         }
-        
+
         // we found the points, now we merge
         // look at that slick warp shuffle
-        int x2 = threadIdx_perpair == threadsperpair - 1 ? length : __shfl_sync(0xffffffff, x1, threadIdx.x + 1);
-        int y2 = threadIdx_perpair == threadsperpair - 1 ? length : __shfl_sync(0xffffffff, x2, threadIdx.x + 1);
-        seq_merge(Out + threadsperpair * STRIDE_THREAD, temp_A, x1, x2, temp_B, y1, y2);
+        int x1 = __shfl_sync(0xffffffff, x2, threadIdx.x - 1);
+        int y1 = __shfl_sync(0xffffffff, y2, threadIdx.x - 1);
+        x1 = threadIdx_perpair == 0 ? 0 : x1;
+        y1 = threadIdx_perpair == 0 ? 0 : y1;
+        
+        /*if(i == 0 && threadIdx.x < 4 && blockIdx.x == 0)
+            printf("%d %d %d %d %d %d %d %d\n", threadIdx.x, x1, x2, y1, y2, offset_A, offset_B, threadIdx.x * STRIDE_THREAD);*/
+
+        seq_merge(Out + threadIdx.x * STRIDE_THREAD, A + offset_A, x1, x2, B + offset_B, y1, y2);
+        
+        /*if(i == 0 && threadIdx.x == 0 && blockIdx.x == 0)
+            printf("**************");
+
+        if(i == 0 && threadIdx.x == 0 && blockIdx.x == 0)
+            for(int j = 0; j < 512; j++){
+                if(j % 32 == 0)
+                    printf("\n");
+                printf("%.0f ", Out[j]);
+            }*/
+
+        #pragma unroll
+        for(int j = 0; j < SMEM_LOADS * 2; j++){
+            d_input[idx + i * SMEM_SIZE * 2 + j * BLOCKSIZE] = Out[j * BLOCKSIZE + threadIdx.x];
+        }
+
     }
 
 }
 
+/*__device__ void move_and_refill(int i_pair, int j_pairload, float *A, float *B, int unconsumed_A, int unconsumed_B, int load_start_A, int load_start_B){
+            // refill
+            #pragma unroll
+            for(int k = 0; k < SMEM_LOADS; k++){ // 8 for A, 8 for B
+                A[threadIdx.x +  + k * BLOCKSIZE] = load_start_A == length ? FLT_MAX : d_input[idx + i * length * 2 + load_start_A + k * BLOCKSIZE];
+            }
+
+            // move non consumed items to start of smem // better than reading from global memory
+            if(unconsumed_A){
+                int k = 0;
+                unconsumed_A += threadIdx.x;
+                while(unconsumed_A < SMEM_SIZE){
+                    A[threadIdx.x + k * BLOCKSIZE] = A[unconsumed_A];
+                    unconsumed_A += BLOCKSIZE;
+                    k++;
+                }
+            }
+
+            // same for B
+            if(unconsumed_B){
+                int k = 0;
+                unconsumed_B += threadIdx.x;
+                while(unconsumed_B < SMEM_SIZE){
+                    B[threadIdx.x + k * BLOCKSIZE] = B[unconsumed_B];
+                    unconsumed_B += BLOCKSIZE;
+                    k++;
+                }
+            }
+
+            #pragma unroll
+            for(int k = 0; k < SMEM_LOADS; k++){ // 8 for A, 8 for B
+                B[threadIdx.x + j * BLOCKSIZE] = d_input[idx + i * SMEM_SIZE * 2 + j * BLOCKSIZE];
+            }
+
+}*/
+
+/*
+// we add refilling
+// first iter: length 512, 1024 pairs, 4 pairs per block and 32 threads per half pair
 __global__ void merge_sort_medium(float *d_input, int length){
 
     __shared__ float A[SMEM_SIZE + 1]; 
     __shared__ float B[SMEM_SIZE + 1]; 
-    __shared__ float Out[SMEM_SIZE + 1];
+    __shared__ float Out[SMEM_SIZE + 1]; 
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
+    
+    int load_start_A, load_start_B; // at which offset to start loading relative to the length x length block
 
-}
+    int loads_per_pair = length * 2 / SMEM_SIZE; // loading smem A, smem B, gives smem out, final out is of size length * 2
 
+    int pairs_per_block = length * 2 / GRIDSIZE2;
+
+    int unconsumed_A, unconsumed_B; // at which offset the unconsumed items start
+
+
+    #pragma unroll
+    for(int i = 0; i < pairs_per_block; i++){
+
+        load_start_A = 0; 
+        load_start_B = 0;
+        unconsumed_A = 0; 
+        unconsumed_B = 0;
+
+        #pragma unroll
+        for(int j = 0; j < loads_per_pair; j++){
+
+            // move and refill
+
+            move_and_refill(i, j, A, B, unconsumed_A, unconsumed_B, load_start_A, load_start_B);
+
+            int diag = (threadIdx.x + 1) * SMEM_SIZE / BLOCKSIZE; 
+            int atop = diag > SMEM_SIZE ? SMEM_SIZE : diag;
+            int btop = diag > SMEM_SIZE ? diag - SMEM_SIZE : 0;
+            int abot = btop;
+
+            int ai, bi;
+            int offset;
+
+            int x1, y1;
+
+            while(1){
+
+                offset = (atop - abot)/2;
+                ai = atop - offset;
+                bi = btop + offset;
+
+                if (ai >= 0 && bi <= length && (A[ai] > B[bi - 1] || ai == length || bi == 0)){
+                    if((A[ai - 1] <= B[bi] || ai == 0 || bi == length)){
+                        x1 = ai;
+                        y1 = bi;
+                    } else {
+                        atop = ai - 1;
+                        btop = bi + 1; 
+                    }
+                } else {
+                    abot = ai + 1;
+                }
+            }
+
+            int x2 = __shfl_sync(0xffffffff, x1, threadIdx.x + 1);
+            int y2 = __shfl_sync(0xffffffff, x2, threadIdx.x + 1);
+            seq_merge(Out + threadIdx.x * STRIDE_THREAD / 2, A, x1, x2, B, y1, y2); // L A, L B, gives us L out, so half stride
+
+            #pragma unroll
+            for(int k = 0; k <= SMEM_SIZE/ BLOCKSIZE; k++){
+                d_input[idx + i * length * 2 + j * BLOCKSIZE] = Out[j * BLOCKSIZE];
+            }
+
+        }
+
+    }
+
+}*/
+
+/*
 __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
 
     __shared__ float A[SMEM_SIZE + 1]; 
@@ -231,7 +372,7 @@ __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *d
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
-}
+}*/
 
 /*
     ok, so what's the problem... imagine we are merging 2 sorted arrays A and B...
@@ -248,6 +389,7 @@ __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *d
 
 // gets called onyl when more than 1 block is needed to process the arrays
 // 1 block 256 threads
+/*
 __global__ void grid_partition_path(float *d_input, int length, int *diag_A, int *diag_B, int blocksperarray){
 
     // get where in d_input we are
@@ -292,11 +434,11 @@ __global__ void grid_partition_path(float *d_input, int length, int *diag_A, int
     }
 
 }
-
+*/
 /*
 __global__ void odd_even_merge_sort(float *d_input){
 
-    __shared__ float s_data[BLOCKSIZE1];
+    __shared__ float s_data[WARPSIZE];
 
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     
@@ -307,15 +449,15 @@ __global__ void odd_even_merge_sort(float *d_input){
     int temp;
 
     #pragma unroll
-    for(int p = 1 << (LOG2BLOCKSIZE1 - 1); p > 0; p /= 2) {
+    for(int p = 1 << (LOG2WARPSIZE - 1); p > 0; p /= 2) {
         
-        int q = 1 << LOG2BLOCKSIZE1;
+        int q = 1 << LOG2WARPSIZE;
         int r = 0;
 
         #pragma unroll
         for (int d = p ; d > 0 ; d = q - p) {
 
-            if(threadIdx.x < BLOCKSIZE1 - d){
+            if(threadIdx.x < WARPSIZE - d){
             
                 if ((threadIdx.x & p) == r) {
                     if (s_data[threadIdx.x] > s_data[threadIdx.x + d]){
@@ -390,7 +532,7 @@ __global__ void warpsize_bitonic_sort(float *d_input){
 // main + interface
 void cuda_interface_sort(float* d_input){
 
-    dim3 dimBlock(BLOCKSIZE1);
+    dim3 dimBlock(WARPSIZE);
     dim3 dimGrid(GRIDSIZE1);
 
     cudaEvent_t start, stop;
@@ -410,29 +552,30 @@ void cuda_interface_sort(float* d_input){
     printf( "warpsize bitonic sort: %.8f ms\n", elapsed_time);
 
 
-    int *diag_A, *diag_B;
+    /*int *diag_A, *diag_B;
     cudaMalloc((void **)&diag_A, GRIDSIZE2 * sizeof(float));
+    checkCudaErrors(cudaGetLastError());
     cudaMalloc((void **)&diag_B, GRIDSIZE2 * sizeof(float));
+    checkCudaErrors(cudaGetLastError());*/
 
     cudaEventRecord(start, 0);
-    
     // 32 -> 256 (inclusive)
-    for(int i = LOG2BLOCKSIZE1; i <= LOG2SMEM; i++){
-        merge_sort_small<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i);
+    for(int i = LOG2WARPSIZE; i <= LOG2SMEM; i++){
+        merge_sort_small<<<GRIDSIZE2, BLOCKSIZE>>>(d_input, 1 << i);
     }
+    /*
     // 256 -> 1024 (inclusive)
     for(int i = LOG2SMEM + 1; i <= LOG2STRIDEBLOCK - 1; i++){
-        merge_sort_medium<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i);
+        merge_sort_medium<<<GRIDSIZE2, BLOCKSIZE>>>(d_input, 1 << i);
     }
     // 2048 -> N/2
     int blocksperarray = 2;
-    for(int i = STRIDE_BLOCK; i <= LOG2ARR_SIZE - 1; i++){
+    for(int i = LOG2STRIDEBLOCK; i <= LOG2ARR_SIZE - 1; i++){
         grid_partition_path<<<1, GRIDSIZE2>>>(d_input, 1 << i, diag_A, diag_B, blocksperarray);
-        merge_sort_large<<<GRIDSIZE2, BLOCKSIZE2>>>(d_input, 1 << i, diag_A, diag_B);
+        merge_sort_large<<<GRIDSIZE2, BLOCKSIZE>>>(d_input, 1 << i, diag_A, diag_B);
         blocksperarray <<= 1;
-    }
+    }*/
 
-    
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsed_time, start, stop);
@@ -446,11 +589,29 @@ void cuda_interface_sort(float* d_input){
 }   
 
 void fill_array(float *h_input){
-
     for(int i = 0; i <  ARR_SIZE; i++){
+        /*if(i < 256)
+            h_input[i] = (float) i;
+        else if(i > 256 && i < 512)
+            h_input[i] = (float) i - 256;
+        else*/
         h_input[i] = (float) (rand() & 255);
     }
 }
+
+void check(float *h_input, int period){
+    int order = 1;
+    for(int i = 0; i < ARR_SIZE/period; i++){
+        for(int j = 1; j < period; j++){
+            if (h_input[i * period + j] < h_input[i * period + j - 1]){
+                order = 0; break;
+            }
+        } 
+    }
+
+    printf("\nordered %d\n", order);
+}
+
 
 int main(void){
 
@@ -463,23 +624,40 @@ int main(void){
      
     fill_array(h_input);
 
+    for(int i = 0; i < 512; i++){
+        if(i % 32 == 0 && i != 0){
+            printf("\n");
+        }
+        if(i % 64 == 0 && i != 0){
+            printf("----------\n");
+        }
+        printf("%.0f ", h_input[i]);
+    }
+
+    printf("\n----------\n");
+    printf("----------\n");
+    printf("----------\n");
+
     cudaMalloc((void **)&d_input, ARR_SIZE * sizeof(float));
     checkCudaErrors(cudaGetLastError());
     
     cudaMemcpy(d_input, h_input, ARR_SIZE * sizeof(float), cudaMemcpyHostToDevice);
+    checkCudaErrors(cudaGetLastError());
 
     cuda_interface_sort(d_input);
 
     cudaMemcpy(h_input, d_input,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
-      
     checkCudaErrors(cudaGetLastError());
 
-    for(int i = 0; i < 64; i++){
-        printf("%f ", h_input[i]);
-        if(i == 31){
+    for(int i = 0; i < 512; i++){
+        if(i % 32 == 0 && i != 0){
             printf("\n");
         }
+        printf("%.0f ", h_input[i]);
     }
+
+    check(h_input, 512);
+
     cudaFree(d_input);
     free(h_input);
 
