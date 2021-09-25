@@ -1,9 +1,10 @@
+0 0 2036 2060 0 0 2058 2038
 
 ----------
 ----------
 ----------
-warpsize bitonic sort: 0.43875200 ms
-merge sort using merge path: 4.48559999 ms
-total time:4.924352
+warpsize bitonic sort: 0.44009599 ms
+merge sort using merge path: 4.59542418 ms
+total time:5.035520
 
 ordered 1

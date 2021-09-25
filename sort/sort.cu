@@ -396,7 +396,7 @@ __global__ void merge_sort_medium(float *d_input, int length){
 
 }
 
-/*
+
 __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
 
     __shared__ float A[SMEM_SIZE + 1]; 
@@ -405,7 +405,7 @@ __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *d
 
     int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
 
-}*/
+}
 
 /*
     ok, so what's the problem... imagine we are merging 2 sorted arrays A and B...
@@ -422,23 +422,27 @@ __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *d
 
 // gets called onyl when more than 1 block is needed to process the arrays
 // 1 block 256 threads
-/*
-__global__ void grid_partition_path(float *d_input, int length, int *diag_A, int *diag_B, int blocksperarray){
+
+__global__ void grid_partition_path(float *d_input, int length, int *diag_A, int *diag_B){
 
     // get where in d_input we are
     d_input += threadIdx.x * STRIDE_BLOCK;
     
     float *A = d_input;
     float *B = d_input + length;
+
+    int blocksperarray = length * 2 / STRIDE_BLOCK;
+
+    int threadIdx_perblocksperarray = threadIdx.x & (blocksperarray - 1);
     
     // blocksperarray blocks process the array
     // so each blocksperarray_i block starts at 0
-    if(threadIdx.x & (blocksperarray - 1)){
+    if(threadIdx_perblocksperarray == 0){
         diag_A[threadIdx.x] = 0;
         diag_B[threadIdx.x] = 0;
     } else {
     
-        int diag = (threadIdx.x + 1) * length * 2 / blockDim.x;
+        int diag = threadIdx_perblocksperarray * length * 2 / blocksperarray; // where it starts instead of where it ends
         int atop = diag > length ? length : diag;
         int btop = diag > length ? diag - length : 0;
         int abot = btop;
@@ -452,10 +456,11 @@ __global__ void grid_partition_path(float *d_input, int length, int *diag_A, int
             ai = atop - offset;
             bi = btop + offset;
 
-            if (ai >= 0 && bi <= length && (A[ai] > B[bi - 1] || ai == length || bi == 0)){
-                if((A[ai - 1] <= B[bi] || ai == 0 || bi == length)){
+            if (ai >= length || bi == 0 || A[ai] > B[bi - 1]){
+                if(ai == 0 || bi >= length || A[ai - 1] <= B[bi]){
                     diag_A[threadIdx.x] = ai;
                     diag_B[threadIdx.x] = bi;
+                    break;
                 } else {
                     atop = ai - 1;
                     btop = bi + 1; 
@@ -466,8 +471,16 @@ __global__ void grid_partition_path(float *d_input, int length, int *diag_A, int
         }
     }
 
+    if(threadIdx.x == 0){
+        printf("%d %d %d %d %d %d %d %d\n", 
+        diag_A[threadIdx.x], diag_B[threadIdx.x], 
+        diag_A[threadIdx.x + 1], diag_B[threadIdx.x + 1] , 
+        diag_A[threadIdx.x + 2], diag_B[threadIdx.x + 2], 
+        diag_A[threadIdx.x + 3], diag_B[threadIdx.x + 3]);
+    }
+
 }
-*/
+
 /*
 __global__ void odd_even_merge_sort(float *d_input){
 
@@ -583,11 +596,11 @@ void cuda_interface_sort(float* d_input){
     printf( "warpsize bitonic sort: %.8f ms\n", elapsed_time);
 
 
-    /*int *diag_A, *diag_B;
+    int *diag_A, *diag_B;
     cudaMalloc((void **)&diag_A, GRIDSIZE2 * sizeof(float));
     checkCudaErrors(cudaGetLastError());
     cudaMalloc((void **)&diag_B, GRIDSIZE2 * sizeof(float));
-    checkCudaErrors(cudaGetLastError());*/
+    checkCudaErrors(cudaGetLastError());
 
     cudaEventRecord(start, 0);
     // 32 -> 256 (inclusive)
@@ -602,6 +615,9 @@ void cuda_interface_sort(float* d_input){
         checkCudaErrors(cudaGetLastError());
     }
 
+    grid_partition_path<<<1, GRIDSIZE2>>>(d_input, 4096, diag_A, diag_B);
+    /*merge_sort_large<<<GRIDSIZE2, BLOCKSIZE>>>(d_input, 4096, diag_A, diag_B);*/
+    
     // 2048 -> N/2
     /*int blocksperarray = 2;
     for(int i = LOG2STRIDEBLOCK; i <= LOG2ARR_SIZE - 1; i++){
