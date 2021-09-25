@@ -1,0 +1,3 @@
+thrust sort: 2.26982403 ms :(
+
+ordered 1

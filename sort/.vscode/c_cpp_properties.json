@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v11.0\\include",
-                "C:\\ProgramData\\NVIDIA Corporation\\CUDA Samples\\v11.0\\common\\inc"
+                "C:\\ProgramData\\NVIDIA Corporation\\CUDA Samples\\v11.0\\common\\inc",
+                "E:\\projects\\cucuda\\cub-1.14.0\\cub"
             ],
             "defines": [
                 "_DEBUG",

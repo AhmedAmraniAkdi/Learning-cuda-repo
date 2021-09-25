@@ -399,11 +399,82 @@ __global__ void merge_sort_medium(float *d_input, int length){
 
 __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
 
-    __shared__ float A[SMEM_SIZE + 1]; 
-    __shared__ float B[SMEM_SIZE + 1]; 
-    __shared__ float Out[SMEM_SIZE + 1]; 
+    extern __shared__ float SMEM[];
 
-    int idx = blockIdx.x * STRIDE_BLOCK + threadIdx.x;
+    float *A = SMEM;
+    float *B = SMEM + SMEM_SIZE;
+    float *Out = SMEM + 2 * SMEM_SIZE;
+
+    int idx = blockIdx.x * STRIDE_BLOCK;
+
+    int offset_smem_A, offset_smem_B; // offset due to non consumed items on smem
+    int offset_A_sums, offset_B_sums;
+    // if we have a bigger arr, but stride block stays cte -> problem - ditch smem?
+    // at this point we should test with multiple configurations of sizes and see what's better but that's for another time
+    int pairs_per_block = 1;
+
+    #pragma unroll
+    for(int i = 0; i < pairs_per_block; i++){
+        offset_smem_A = SMEM_SIZE, offset_smem_B = SMEM_SIZE; // initialisation
+        offset_A_sums = diag_A[blockIdx.x] - SMEM_SIZE, offset_B_sums = diag_B[blockIdx.x] - SMEM_SIZE;
+        
+        #pragma unroll
+        for(int j = 0; j < length * 2 / SMEM_SIZE; j++){
+            // move unconsumed items and refill from global mem
+            move_and_refill(d_input, i, j, A, B, offset_smem_A, offset_smem_B, offset_A_sums, offset_B_sums, length * 2);
+
+            int diag = (threadIdx.x + 1) * SMEM_SIZE / BLOCKSIZE; // diagonal relative L A, L B loaded on smem
+            int atop = diag;
+            int btop = 0;
+            int abot = btop;
+            
+            int ai, bi;
+            int offset;
+
+            int x2, y2;
+
+            while(1){
+                offset = (atop - abot)/2;
+                ai = atop - offset;
+                bi = btop + offset;
+
+                if (ai >= length || bi == 0 || A[ai] > B[bi - 1]){
+                    if(ai == 0 || bi >= length || A[ai - 1] <= B[bi]){
+                        x2 = ai;
+                        y2 = bi;
+                        break;
+                    } else {
+                        atop = ai - 1;
+                        btop = bi + 1; 
+                    }
+                } else {
+                    abot = ai + 1;
+                }
+            }
+
+            // we found the points, now we merge
+            // look at that slick warp shuffle
+            int x1 = __shfl_sync(0xffffffff, x2, threadIdx.x - 1);
+            int y1 = __shfl_sync(0xffffffff, y2, threadIdx.x - 1);
+            x1 = threadIdx.x == 0 ? 0 : x1;
+            y1 = threadIdx.x == 0 ? 0 : y1;
+
+            offset_smem_A = __shfl_sync(0xffffffff, x2, 31);
+            offset_smem_B = __shfl_sync(0xffffffff, y2, 31);
+
+            seq_merge(Out + threadIdx.x * STRIDE_THREAD / 2 + j * SMEM_SIZE, A, x1, x2, B, y1, y2, STRIDE_THREAD / 2);
+
+        }
+
+        float4 *temp_d_input = (float4*) (d_input + idx + i * length * 2);
+        float4 *temp_Out = (float4*) Out;
+
+        #pragma unroll
+        for(int k = 0; k < length * 2 / 4 / BLOCKSIZE; k++){
+            temp_d_input[k * BLOCKSIZE + threadIdx.x] = temp_Out[k * BLOCKSIZE + threadIdx.x];
+        }
+
+    }
 
 }
 
@@ -616,7 +687,7 @@ void cuda_interface_sort(float* d_input){
     }
 
     grid_partition_path<<<1, GRIDSIZE2>>>(d_input, 4096, diag_A, diag_B);
-    /*merge_sort_large<<<GRIDSIZE2, BLOCKSIZE>>>(d_input, 4096, diag_A, diag_B);*/
+    /*merge_sort_large<<<GRIDSIZE2, BLOCKSIZE, ((1 << LOG2STRIDEBLOCK) + 256 + 256) * sizeof(float)>>>(d_input, 4096, diag_A, diag_B);*/
     
     // 2048 -> N/2
     /*int blocksperarray = 2;
