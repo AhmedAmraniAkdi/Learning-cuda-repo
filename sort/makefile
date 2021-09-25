@@ -10,6 +10,7 @@ all: remove sort
 
 sort:
 	nvcc -arch=sm_50 sort.cu -o sort.exe -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v -lineinfo
+	.\sort.exe > output.txt
 
 #debug binary for mem check
 debug:
@@ -17,9 +18,11 @@ debug:
 	nvcc -arch=sm_50 sort.cu -o sort_debug.exe -G -g -O0 -Wno-deprecated-gpu-targets $(INCSAMPLES_H) -Xptxas -v 
 	cuda-memcheck ./sort_debug.exe > output_memcheck.txt
 
-py:
-	& E:/programs/Anaconda3/python.exe "e:/projects/cucuda/Learning Cuda repo/sort/mergesortsmall.py"
+py1:
+	E:/programs/Anaconda3/python.exe "e:/projects/cucuda/Learning Cuda repo/sort/mergesortsmall.py"
 
+py2:
+	E:/programs/Anaconda3/python.exe "e:/projects/cucuda/Learning Cuda repo/sort/mergesortmedium.py" > py2output.txt
 
 .PHONY: remove
 remove:
