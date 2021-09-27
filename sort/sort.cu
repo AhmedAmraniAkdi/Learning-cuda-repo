@@ -1,8 +1,21 @@
+/*
+
+ok, so.... after thinking, i will need another array where to write the partial results, 
+that way we don't overwrite values after mergin without reading them
+
+everything works correctly up the the merge sort large kernel which remains unfinished
+will remake the sizes calculations and the kernels on sortv2
+
+problem line 420
+
+*/
+
+
+
 #include <cuda_runtime.h>
 #include <iostream>
 #include <stdlib.h>
 #include <helper_cuda.h>
-
 
 #define ARR_SIZE (1 << 20)
 #define WARPSIZE (1 << 5)
@@ -396,7 +409,7 @@ __global__ void merge_sort_medium(float *d_input, int length){
 
 }
 
-
+// UNFINISHED KERNEL
 __global__ void merge_sort_large(float *d_input, int length, int *diag_A, int *diag_B){
 
     extern __shared__ float SMEM[];
@@ -686,7 +699,7 @@ void cuda_interface_sort(float* d_input){
         checkCudaErrors(cudaGetLastError());
     }
 
-    grid_partition_path<<<1, GRIDSIZE2>>>(d_input, 4096, diag_A, diag_B);
+    //grid_partition_path<<<1, GRIDSIZE2>>>(d_input, 4096, diag_A, diag_B);
     /*merge_sort_large<<<GRIDSIZE2, BLOCKSIZE, ((1 << LOG2STRIDEBLOCK) + 256 + 256) * sizeof(float)>>>(d_input, 4096, diag_A, diag_B);*/
     
     // 2048 -> N/2

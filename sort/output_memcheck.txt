@@ -1,0 +1,948 @@
+
+----------
+----------
+----------
+warpsize bitonic sort: 854.47698975 ms
+merge sort using merge path: 854.47698975 ms
+total time:1708.953979
+========= CUDA-MEMCHECK
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (31,0,0) in block (511,0,0)
+=========     Address 0x500f001f0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (30,0,0) in block (511,0,0)
+=========     Address 0x500f001e0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (29,0,0) in block (511,0,0)
+=========     Address 0x500f001d0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (28,0,0) in block (511,0,0)
+=========     Address 0x500f001c0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (27,0,0) in block (511,0,0)
+=========     Address 0x500f001b0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (26,0,0) in block (511,0,0)
+=========     Address 0x500f001a0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (25,0,0) in block (511,0,0)
+=========     Address 0x500f00190 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (24,0,0) in block (511,0,0)
+=========     Address 0x500f00180 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (23,0,0) in block (511,0,0)
+=========     Address 0x500f00170 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (22,0,0) in block (511,0,0)
+=========     Address 0x500f00160 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (21,0,0) in block (511,0,0)
+=========     Address 0x500f00150 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (20,0,0) in block (511,0,0)
+=========     Address 0x500f00140 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (19,0,0) in block (511,0,0)
+=========     Address 0x500f00130 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (18,0,0) in block (511,0,0)
+=========     Address 0x500f00120 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (17,0,0) in block (511,0,0)
+=========     Address 0x500f00110 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (16,0,0) in block (511,0,0)
+=========     Address 0x500f00100 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (15,0,0) in block (511,0,0)
+=========     Address 0x500f000f0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (14,0,0) in block (511,0,0)
+=========     Address 0x500f000e0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (13,0,0) in block (511,0,0)
+=========     Address 0x500f000d0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (12,0,0) in block (511,0,0)
+=========     Address 0x500f000c0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (11,0,0) in block (511,0,0)
+=========     Address 0x500f000b0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (10,0,0) in block (511,0,0)
+=========     Address 0x500f000a0 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (9,0,0) in block (511,0,0)
+=========     Address 0x500f00090 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (8,0,0) in block (511,0,0)
+=========     Address 0x500f00080 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (7,0,0) in block (511,0,0)
+=========     Address 0x500f00070 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (6,0,0) in block (511,0,0)
+=========     Address 0x500f00060 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (5,0,0) in block (511,0,0)
+=========     Address 0x500f00050 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (4,0,0) in block (511,0,0)
+=========     Address 0x500f00040 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (3,0,0) in block (511,0,0)
+=========     Address 0x500f00030 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (2,0,0) in block (511,0,0)
+=========     Address 0x500f00020 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (1,0,0) in block (511,0,0)
+=========     Address 0x500f00010 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Invalid __global__ write of size 16
+=========     at 0x000016c8 in E:\\projects\\cucuda\\Learning Cuda repo\\sort\/sort_v2.cu:130:merge_sort_small(float4*, float4*)
+=========     by thread (0,0,0) in block (511,0,0)
+=========     Address 0x500f00000 is out of bounds
+=========     Saved host backtrace up to driver entry point at kernel launch time
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x81d7d]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x82117]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x8681e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x176aa9]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0xe90f2) [0x3066f2]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x360cd]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x364f1]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x367d4]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuLaunchKernel + 0x234) [0x20d3d4]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::cudaApiLaunchKernel + 0xf6) [0x20cd6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel + 0x1c4) [0xc564]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaLaunchKernel<char> + 0x7b) [0x4b7fb]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__device_stub__Z16merge_sort_smallP6float4S0_ + 0x1a8) [0x4b488]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (merge_sort_small + 0x1d) [0x4abad]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x295) [0x4aed5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit cudaErrorLaunchFailure (error 719) due to "unspecified launch failure" on CUDA API call to cudaEventSynchronize.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86ebe]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x12c212) [0x349812]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaEventSynchronize + 0x103) [0x4643]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x2cb) [0x4af0b]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit cudaErrorLaunchFailure (error 719) due to "unspecified launch failure" on CUDA API call to cudaEventElapsedTime.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86ebe]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x12c212) [0x349812]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaEventElapsedTime + 0x125) [0x4115]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x2df) [0x4af1f]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit cudaErrorLaunchFailure (error 719) due to "unspecified launch failure" on CUDA API call to cudaEventDestroy.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86ebe]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x12c212) [0x349812]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaEventDestroy + 0x103) [0x3fc3]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x32f) [0x4af6f]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit cudaErrorLaunchFailure (error 719) due to "unspecified launch failure" on CUDA API call to cudaEventDestroy.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86ebe]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x12c212) [0x349812]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaEventDestroy + 0x103) [0x3fc3]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cuda_interface_sort + 0x339) [0x4af79]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xbc) [0x4b21c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit cudaErrorLaunchFailure (error 719) due to "unspecified launch failure" on CUDA API call to cudaMemcpy.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86ebe]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x12c212) [0x349812]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaMemcpy + 0x130) [0xdf10]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xd7) [0x4b237]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit cudaErrorLaunchFailure (error 719) due to "unspecified launch failure" on CUDA API call to cudaGetLastError.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86ebe]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x12c212) [0x349812]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudaGetLastError + 0xf1) [0x5d51]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xdc) [0x4b23c]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= Program hit CUDA_ERROR_LAUNCH_FAILED (error 719) due to "unspecified launch failure" on CUDA API call to cuModuleUnload.
+=========     Saved host backtrace up to driver entry point at error
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x8ff3e) [0x2ad53e]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x928e3) [0x2afee3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x84c67]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll [0x86db3]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuProfilerStop + 0x113e8a) [0x33148a]
+=========     Host Frame:C:\WINDOWS\system32\DriverStore\FileRepository\nvmiui.inf_amd64_7b044509b7596782\nvcuda64.dll (cuModuleUnload + 0x1d6) [0x1d5846]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::module::unload + 0x115) [0x38af5]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::contextState::unloadAllModules + 0x196) [0x390f6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::contextStateManager::destroyAllContextStatesOnRuntimeUnload + 0x78) [0x3d278]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::globalState::~globalState + 0x3d) [0x285ed]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (cudart::set<cudart::globalModule * __ptr64>::rehash + 0x106) [0x2ffb6]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (<lambda_f03950bc5685219e0bcd2087efbe011e>::operator() + 0x8b) [0x84eab]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__crt_seh_guarded_call<int>::operator()<<lambda_7777bce6b2f8c936911f934f8298dc43>,<lambda_f03950bc5685219e0bcd2087efbe011e> &,<lambda_3883c3dff614d5e0c5f61bb1ac94921c> > + 0x25) [0x84afd]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (_execute_onexit_table + 0x35) [0x84fb1]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (<lambda_6e4b09c48022b2350581041d5f6b0c4c>::operator() + 0x6f) [0x66c53]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__crt_seh_guarded_call<void>::operator()<<lambda_d80eeec6fff315bfe5c115232f3240e3>,<lambda_6e4b09c48022b2350581041d5f6b0c4c> &,<lambda_2358e3775559c9db80273638284d5e45> > + 0x25) [0x66b11]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (common_exit + 0xa3) [0x66db7]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (check<enum cudaError> + 0x75) [0x4b885]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (main + 0xf7) [0x4b257]
+=========     Host Frame:E:\projects\cucuda\Learning Cuda repo\sort\sort_debugv2.exe (__scrt_common_main_seh + 0x10c) [0x4ca30]
+=========     Host Frame:C:\WINDOWS\System32\KERNEL32.DLL (BaseThreadInitThunk + 0x14) [0x17034]
+=========     Host Frame:C:\WINDOWS\SYSTEM32\ntdll.dll (RtlUserThreadStart + 0x21) [0x52651]
+=========
+========= ERROR SUMMARY: 39 errors
