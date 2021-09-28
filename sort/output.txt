@@ -1,9 +1,0 @@
-
-----------
-----------
-----------
-warpsize bitonic sort: 0.44012800 ms
-merge sort using merge path: 4.48124790 ms
-total time:4.921376
-
-ordered 1

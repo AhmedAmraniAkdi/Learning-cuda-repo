@@ -9,13 +9,140 @@
 #define ARR_SIZE (1 << 20)
 
 #define BLOCKSIZE 32
-#define GRIDSIZE 512
+#define GRIDSIZE 1024 // ARR_SIZE/SMEM
 #define SMEM 1024
-#define ITEMSPERBLOCK 2048
+// diff 2 with sort_v1: if itemsperblock == smem, no need for medium merge kernel nor multiple loads, can load everything a block processes on smem
+#define ITEMSPERBLOCK 1024 
 #define ITEMSPERTHREAD 32 // SMEM / 32
-#define FLOAT4LOADS 2// ITEMSPERBLOCK/SMEM
+#define FLOAT4LOADS 1// ITEMSPERBLOCK/SMEM
 
 
+/*************************************************************************
+ * **********************************************************************/
+/*
+__device__ void swap_smem_ptr(float **r, float **s){
+    float *pSwap = *r;
+    *r = *s;
+    *s = pSwap;
+}
+
+__global__ void merge_sort_small(float4 *d_input, float4 *d_output){
+    
+    //__shared__ int offset_A;
+    //__shared__ int offset_B;
+
+    __shared__ float4 A_B[SMEM/4];
+    __shared__ float4 Out[SMEM/4]; //ping pong
+    // this is wierd but works! - https://stackoverflow.com/questions/3393518/swap-arrays-by-using-pointers-in-c
+    float *A_Bptr = (float *) A_B;
+    float *Outptr = (float *) Out;
+
+    __shared__ float temp_A[32];
+    __shared__ float temp_B[32];
+
+    int idx = blockIdx.x * ITEMSPERBLOCK / 4;
+    d_input += idx;
+    d_output += idx;
+
+    // diff 1 with sort_v1: merge up to size of smem, instead of multiple times reading from gmem, pinpong with smems
+    #pragma unroll
+    for(int length = 32; length < SMEM; length = length * 2){
+        if(length == 32){ // first time read from gmem, then from out
+            #pragma unroll
+            for(int j = threadIdx.x; j < SMEM / 4; j += 32){
+                A_B[j] = d_input[j];
+            }
+        } else {
+            swap_smem_ptr(&A_Bptr, &Outptr);
+        }
+
+        // diff 3 : no seq merge, merge 32 items concurrently steps times using binary search
+        // no more slick warp shuffle :(
+        #pragma unroll
+        for(int pairs = 0; pairs < SMEM/length/2; pairs++){
+
+            int offset_A = pairs * length * 2;
+            int offset_B = offset_A + length;
+
+            int end_A = offset_B;
+            int end_B = offset_B + length;
+
+            int x = 0;
+            int y = 0;
+
+            #pragma unroll
+            for(int step = 0; step < length * 2 / 32; step++){
+
+                offset_A += x;
+                offset_B += y;
+                
+                int As = end_A - offset_A;
+                int Bs = end_B - offset_B;
+
+                if (As < 0)  As = 0;
+                if (As > 32) As = 32;
+                if (Bs < 0)  Bs = 0;
+                if (Bs > 32) Bs = 32;
+
+                int diag = threadIdx.x;
+                int atop = diag;
+                int btop = 0;
+                int abot = btop;
+
+                temp_A[threadIdx.x] = FLT_MAX; // easier to reason with
+                temp_B[threadIdx.x] = FLT_MAX;
+
+                if(threadIdx.x < As) temp_A[threadIdx.x] = A_Bptr[offset_A + threadIdx.x]; 
+                if(threadIdx.x < Bs) temp_B[threadIdx.x] = A_Bptr[offset_B + threadIdx.x];
+                
+
+                while(1){
+                    // a crazy idea would be to use shuffle functions
+                    int offset = (atop - abot)/2;
+                    int ai = atop - offset;
+                    int bi = btop + offset;
+
+                    if (ai >= 32 || bi == 0 || temp_A[ai] > temp_B[bi - 1]){
+                            
+                        if(ai == 0 || bi >= 32 ||  temp_A[ai - 1] <=  temp_B[bi]){
+
+                            if (ai < 32 && (bi == 32 || temp_A[ai] <= temp_B[bi])){
+
+                                Outptr[pairs * length * 2 + step * 32 + threadIdx.x] = temp_A[ai];
+                                ai++;
+
+                            } else {
+                                
+                                Outptr[pairs * length * 2 + step * 32 + threadIdx.x] = temp_B[bi]; // we merge 32 ateach step
+                                bi++;
+
+                            }
+
+                            x = __shfl_sync(0xffffffff, ai, 31); 
+                            y = __shfl_sync(0xffffffff, bi, 31); 
+
+                            break;
+                        } else {
+                            atop = ai - 1;
+                            btop = bi + 1; 
+                        }
+                        
+                    } else {
+                        abot = ai + 1;
+                    }
+                }
+
+            }
+        }
+
+    }
+    #pragma unroll
+    for(int j = threadIdx.x; j < SMEM / 4; j += 32){
+        d_output[j] = Out[j]; // at the end the result is in out
+    }
+}
+
+*/
 __device__ void seq_merge(float *dest, float *A, int start_a, int end_a, float *B, int start_b, int end_b, int howmany){
 
     float item_A = A[start_a];
@@ -63,7 +190,7 @@ __global__ void merge_sort_small(float4 *d_input, float4 *d_output){
 
     #pragma unroll
     for(int i = 0; i < FLOAT4LOADS; i++){
-        // diff with sort_v1: merge up to size of smem, instead of multiple times reading from gmem, pinpong with smems
+        // diff 1 with sort_v1: merge up to size of smem, instead of multiple times reading from gmem, pinpong with smems
         #pragma unroll
         for(int length = 32; length < SMEM; length = length * 2){ 
             int threadsperpair = length * 2 / ITEMSPERTHREAD; 
@@ -133,6 +260,144 @@ __global__ void merge_sort_small(float4 *d_input, float4 *d_output){
 
 }
 
+/*************************************************************************
+ * **********************************************************************/
+/*
+
+__global__ void merge_sort_medium(float *d_input, int length){
+
+    extern __shared__ float SMEM[];
+
+    float *A = SMEM;
+    float *B = SMEM + SMEM_SIZE;
+    float *Out = SMEM + 2 * SMEM_SIZE;
+
+
+
+    int idx = blockIdx.x * STRIDE_BLOCK;
+
+    int offset_smem_A, offset_smem_B; // offset due to non consumed items on smem
+    int offset_A_sums, offset_B_sums;
+    int pairs_per_block = STRIDE_BLOCK / length / 2;
+
+    #pragma unroll
+    for(int i = 0; i < pairs_per_block; i++){
+        offset_smem_A = SMEM_SIZE, offset_smem_B = SMEM_SIZE; // initialisation
+        offset_A_sums = -SMEM_SIZE, offset_B_sums = -SMEM_SIZE;
+        
+        #pragma unroll
+        for(int j = 0; j < length * 2 / SMEM_SIZE; j++){
+            // move unconsumed items and refill from global mem
+            move_and_refill(d_input, i, j, A, B, offset_smem_A, offset_smem_B, offset_A_sums, offset_B_sums, length * 2);
+
+            int diag = (threadIdx.x + 1) * SMEM_SIZE / BLOCKSIZE; // diagonal relative L A, L B loaded on smem
+            int atop = diag;
+            int btop = 0;
+            int abot = btop;
+            
+            int ai, bi;
+            int offset;
+
+            int x2, y2;
+
+            while(1){
+                offset = (atop - abot)/2;
+                ai = atop - offset;
+                bi = btop + offset;
+
+                if (ai >= length || bi == 0 || A[ai] > B[bi - 1]){
+                    if(ai == 0 || bi >= length || A[ai - 1] <= B[bi]){
+                        x2 = ai;
+                        y2 = bi;
+                        break;
+                    } else {
+                        atop = ai - 1;
+                        btop = bi + 1; 
+                    }
+                } else {
+                    abot = ai + 1;
+                }
+            }
+
+            // we found the points, now we merge
+            // look at that slick warp shuffle
+            int x1 = __shfl_sync(0xffffffff, x2, threadIdx.x - 1);
+            int y1 = __shfl_sync(0xffffffff, y2, threadIdx.x - 1);
+            x1 = threadIdx.x == 0 ? 0 : x1;
+            y1 = threadIdx.x == 0 ? 0 : y1;
+
+            offset_smem_A = __shfl_sync(0xffffffff, x2, 31);
+            offset_smem_B = __shfl_sync(0xffffffff, y2, 31);
+
+            seq_merge(Out + threadIdx.x * STRIDE_THREAD / 2 + j * SMEM_SIZE, A, x1, x2, B, y1, y2, STRIDE_THREAD / 2);
+
+        }
+
+        float4 *temp_d_input = (float4*) (d_input + idx + i * length * 2);
+        float4 *temp_Out = (float4*) Out;
+
+        #pragma unroll
+        for(int k = 0; k < length * 2 / 4 / BLOCKSIZE; k++){
+            temp_d_input[k * BLOCKSIZE + threadIdx.x] = temp_Out[k * BLOCKSIZE + threadIdx.x];
+        }
+
+    }
+
+}
+
+__global__ void grid_partition_path(float *d_input, int length, int *diag_A, int *diag_B){
+
+    // get where in d_input we are
+    d_input += threadIdx.x * STRIDE_BLOCK;
+    
+    float *A = d_input;
+    float *B = d_input + length;
+
+    int blocksperarray = length * 2 / STRIDE_BLOCK;
+
+    int threadIdx_perblocksperarray = threadIdx.x & (blocksperarray - 1);
+    
+    // blocksperarray blocks process the array
+    // so each blocksperarray_i block starts at 0
+    if(threadIdx_perblocksperarray == 0){
+        diag_A[threadIdx.x] = 0;
+        diag_B[threadIdx.x] = 0;
+    } else {
+    
+        int diag = threadIdx_perblocksperarray * length * 2 / blocksperarray; // where it starts instead of where it ends
+        int atop = diag > length ? length : diag;
+        int btop = diag > length ? diag - length : 0;
+        int abot = btop;
+
+        int ai, bi;
+        int offset;
+
+        while(1){
+
+            offset = (atop - abot)/2;
+            ai = atop - offset;
+            bi = btop + offset;
+
+            if (ai >= length || bi == 0 || A[ai] > B[bi - 1]){
+                if(ai == 0 || bi >= length || A[ai - 1] <= B[bi]){
+                    diag_A[threadIdx.x] = ai;
+                    diag_B[threadIdx.x] = bi;
+                    break;
+                } else {
+                    atop = ai - 1;
+                    btop = bi + 1; 
+                }
+            } else {
+                abot = ai + 1;
+            }
+        }
+    }
+
+}
+*/
+
+/*************************************************************************
+ * **********************************************************************/
 
 __device__ float swap(int x, int mask, int dir){
     float y = __shfl_xor_sync(0xffffffff, x, mask);
@@ -206,11 +471,11 @@ int main(void){
      
     fill_array(h_input);
 
-    /*for(int i = 0; i < 1024; i++){
+    /*for(int i = 0; i < 64; i++){
         if(i % 32 == 0 && i != 0){
             printf("\n");
         }
-        printf("%.0f ", h_input[i]);
+        printf("%.0f ", h_input[1024+i]);
     }*/
 
     printf("\n----------\n");
@@ -268,12 +533,12 @@ int main(void){
     cudaMemcpy(h_input, ping_pong,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
     checkCudaErrors(cudaGetLastError());
 
-    /*for(int i = 0; i < 1024; i++){
+    for(int i = 0; i < 1024; i++){
         if(i % 32 == 0 && i != 0){
             printf("\n");
         }
-        printf("%.0f ", h_input[i]);
-    }*/
+        printf("%.0f ", h_input[1024+i]);
+    }
 
     check(h_input, 1024);
 
