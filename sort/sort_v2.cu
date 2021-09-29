@@ -9,7 +9,7 @@
 #define ARR_SIZE (1 << 20)
 #define LOGARRSIZE 20
 #define BLOCKSIZE 32
-#define GRIDSIZE 1024 // ARR_SIZE/SMEM
+#define GRIDSIZE 1024 // ARR_SIZE/SMEM // if we increment this, won't be able to call gridpartition, max threads 1024 i believe, so more work shld go there
 #define SMEM 1024
 #define LOGSMEM 10
 // diff 2 with sort_v1: if itemsperblock == smem, no need for medium merge kernel nor multiple loads, can load everything a block processes on smem
@@ -267,7 +267,6 @@ __global__ void merge_sort_small(float4 *d_input, float4 *d_output){
 
 __global__ void merge_sort_bigger_than_smem(float *d_input, int length, float *d_output, int *diag_A, int *diag_B, int blocksperpair){
 
-
     __shared__ float A[SMEM]; // we can put A and B together since max items per block is SMEM, for later
     __shared__ float B[SMEM];
     __shared__ float Out[SMEM];
@@ -278,16 +277,16 @@ __global__ void merge_sort_bigger_than_smem(float *d_input, int length, float *d
         B[k] = FLT_MAX;
     }
 
-    int threadIdx_perblocksperpair = threadIdx.x & (blocksperpair - 1);
+    int blockIdx_perblocksperpair = blockIdx.x & (blocksperpair - 1);
 
     int offset_A2 = diag_A[blockIdx.x];
     int offset_B2 = diag_B[blockIdx.x];
 
-    int offset_A1 = threadIdx_perblocksperpair == 0? 0 : diag_A[blockIdx.x - 1];
-    int offset_B1 = threadIdx_perblocksperpair == 0? 0 : diag_B[blockIdx.x - 1];
+    int offset_A1 = blockIdx_perblocksperpair == 0? 0 : diag_A[blockIdx.x - 1];
+    int offset_B1 = blockIdx_perblocksperpair == 0? 0 : diag_B[blockIdx.x - 1];
 
-    d_input += threadIdx.x/blocksperpair * 2 * length;
-    d_output += threadIdx.x/blocksperpair * 2 * length;
+    d_input += blockIdx.x/blocksperpair * 2 * length;
+    d_output += blockIdx.x/blocksperpair * 2 * length;
 
     int countA = offset_A2 - offset_A1;
     int countB = offset_B2 - offset_B1;
@@ -302,33 +301,34 @@ __global__ void merge_sort_bigger_than_smem(float *d_input, int length, float *d
         B[k] = d_input[offset_B1 + length + k];
     }
 
-    int x1 = 0, y1 = 0;
-    int x2 = 0, y2 = 0;
+    int x2 = countA, y2 = countB;   
+
+    if(threadIdx.x != 31){  
+        int diag = (threadIdx.x + 1) * 32;
+        int atop = diag;
+        int btop = 0;
+        int abot = btop;
         
-    int diag = (threadIdx.x + 1) * SMEM / BLOCKSIZE;
-    int atop = diag > length ? length : diag;
-    int btop = diag > length ? diag - length : 0;
-    int abot = btop;
-    
-    int ai, bi;
-    int offset;
+        int ai, bi;
+        int offset;
 
-    while(1){
-        offset = (atop - abot)/2;
-        ai = atop - offset;
-        bi = btop + offset;
+        while(1){
+            offset = (atop - abot)/2;
+            ai = atop - offset;
+            bi = btop + offset;
 
-        if (ai >= length || bi == 0 || A[ai] > B[bi - 1]){
-            if(ai == 0 || bi >= length || A[ai] <= B[bi]){
-                x2 = ai;
-                y2 = bi;
-                break;
+            if (ai >= SMEM || bi == 0 || A[ai] > B[bi - 1]){
+                if(ai == 0 || bi >= SMEM || A[ai - 1] <= B[bi]){
+                    x2 = ai;
+                    y2 = bi;
+                    break;
+                } else {
+                    atop = ai - 1;
+                    btop = bi + 1; 
+                }
             } else {
-                atop = ai - 1;
-                btop = bi + 1; 
+                abot = ai + 1;
             }
-        } else {
-            abot = ai + 1;
         }
     }
 
@@ -339,28 +339,27 @@ __global__ void merge_sort_bigger_than_smem(float *d_input, int length, float *d
 
     seq_merge(Out + threadIdx.x * ITEMSPERTHREAD, A, x1, x2, B, y1, y2, ITEMSPERTHREAD);
 
-
     #pragma unroll
     for(int k = threadIdx.x; k < SMEM; k += 32){
-        d_output[threadIdx_perblocksperpair * SMEM + k] = Out[k]; 
+        d_output[blockIdx_perblocksperpair * SMEM + k] = Out[k]; 
     }
 
 }
 
 __global__ void grid_partition_path(float *d_input, int length, int *diag_A, int *diag_B, int blocksperpair){
 
-    int threadIdx_perblocksperpair = threadIdx.x & (blocksperpair - 1);
+    int blockIdx_perblocksperpair = threadIdx.x & (blocksperpair - 1);
     float *A = d_input + threadIdx.x/blocksperpair * 2 * length;
     float *B = A + length;
     
     // blocksperarray blocks process the array
     // so each blocksperarray_i block starts at 0
-    if(threadIdx_perblocksperpair == blocksperpair - 1){
+    if(blockIdx_perblocksperpair == blocksperpair - 1){
         diag_A[threadIdx.x] = length;
         diag_B[threadIdx.x] = length;
     } else {
     
-        int diag = (threadIdx_perblocksperpair + 1) * length * 2 / blocksperpair; // where it starts instead of where it ends
+        int diag = (blockIdx_perblocksperpair + 1) * length * 2 / blocksperpair; // where it starts instead of where it ends
         int atop = diag > length ? length : diag;
         int btop = diag > length ? diag - length : 0;
         int abot = btop;
@@ -514,6 +513,7 @@ int main(void){
     cudaEventRecord(start, 0);
     // 32 -> 512 (inclusive)
     merge_sort_small<<<GRIDSIZE, BLOCKSIZE>>>((float4 *) d_input, (float4 *) ping_pong);
+        
 
     for(int step = LOGSMEM; step < LOGARRSIZE; step++){
         int blocksperpair = (1 << (step + 1))/SMEM;
@@ -537,7 +537,7 @@ int main(void){
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
     /////////////////////////
-    
+
     if((LOGARRSIZE - LOGSMEM - 1) & 1){
         cudaMemcpy(h_input, ping_pong,  ARR_SIZE * sizeof(float), cudaMemcpyDeviceToHost);
         checkCudaErrors(cudaGetLastError());
@@ -546,11 +546,11 @@ int main(void){
         checkCudaErrors(cudaGetLastError());
     }
 
-    /*for(int i = 0; i < 1024; i++){
+    /*for(int i = 0; i < 2048; i++){
         if(i % 32 == 0 && i != 0){
             printf("\n");
         }
-        printf("%.0f ", h_input[1024+i]);
+        printf("%.0f ", h_input[2048+i]);
     }*/
 
     check(h_input, ARR_SIZE);
