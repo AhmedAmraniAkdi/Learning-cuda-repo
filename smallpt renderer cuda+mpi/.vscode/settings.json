@@ -71,6 +71,7 @@
         "xutility": "cpp",
         "map": "cpp",
         "set": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "__locale": "cpp"
     }
 }
