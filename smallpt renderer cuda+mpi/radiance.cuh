@@ -16,7 +16,125 @@ __device__ inline float luma(const float3& color){
 	return dot(color, make_float3(0.2126f, 0.7152f, 0.0722f));
 }
 
-__device__ inline float3 radiance(const Ray &r, int depth, curandState *state, int idx) {
+__device__ void diff(curandStatePhilox4_32_10_t *state, int idx, float3 nl, float3 x, float3 albedo, Sphere obj, float3 &multiplier, float3 &result, Ray &r){
+		float phi = 2 * M_PI * curand_uniform(&state[idx]);
+		float r2 = curand_uniform(&state[idx]);
+		float sinTheta = sqrt(r2);
+		float cosTheta = sqrt(1 - r2);
+		float3 w = nl;
+		float3 u = normalize(cross(fabs(w.x) > .1 ? make_float3(0, 1, 0) : make_float3(1, 0, 0), w));
+		float3 v = cross(w, u);
+		float3 d = normalize(u*cos(phi)*sinTheta + v * sin(phi)*sinTheta + w * cosTheta);
+
+		result += multiplier * obj.emision;
+		r.origin = x;
+		r.dir = d;
+		multiplier = albedo;
+
+}
+
+__device__ void spec(curandStatePhilox4_32_10_t *state, int idx, float3 n, float3 x, float3 albedo, Sphere obj, float3 &multiplier, float3 &result, Ray &r){
+
+	    float3 refl = r.dir - n * 2 * dot(n, r.dir);
+
+		result += multiplier * obj.emision;
+		r.origin = x;
+		r.dir = refl;
+		multiplier = albedo;
+
+}
+
+__device__ void refr(curandStatePhilox4_32_10_t *state, int idx, float3 n, float3 nl, float3 x, float3 albedo, Sphere obj, float3 &multiplier, float3 &result, Ray &r){
+
+
+	Ray reflRay(x, r.dir - n * 2 * dot(n,r.dir));
+	bool into = dot(n,nl) > 0;
+	float nc = 1;
+	float nt = 1.5;
+	float nnt = into ? nc / nt : nt / nc;
+	float cosTheta = dot(r.dir, nl);
+	float cosTheta2Sqr;
+
+	if ((cosTheta2Sqr = 1 - nnt * nnt*(1 - cosTheta * cosTheta)) < 0){
+		result += multiplier * obj.emision;
+		r.origin = reflRay.origin;
+		r.dir = reflRay.dir;
+		multiplier = albedo;
+		return;
+	} 
+
+	float3 tdir = normalize(r.dir*nnt - n * ((into ? 1 : -1)*(cosTheta*cosTheta + sqrt(cosTheta2Sqr))));
+
+	float a = nt - nc;
+	float b = nt + nc;
+	float R0 = a * a / (b*b);
+	float cosTheta2 = dot(tdir, n);
+	float c = 1 - (into ? -cosTheta : cosTheta2);
+	float Re = R0 + (1 - R0)*c*c*c*c*c;
+	float Tr = 1 - Re;
+
+	float P = .25 + .5*Re;
+	float RP = Re / P;
+	float TP = Tr / (1 - P);
+
+	// Russian roulette decision (between reflected and refracted ray)
+	if (curand_uniform(&state[idx]) < P){//reflect
+		result += multiplier * obj.emision;
+		r.origin = reflRay.origin;
+		r.dir = reflRay.dir;
+		multiplier = albedo * RP;
+	}
+	else{//refract
+		result += multiplier * obj.emision;
+		r.origin = x;
+		r.dir = tdir;
+		multiplier = albedo * TP;
+	}
+}
+
+
+__device__ float3 radiance(Ray r, int depth, curandStatePhilox4_32_10_t *state, int idx){
+
+	float3 result = make_float3(0);
+	float3 multiplier = make_float3(1);
+
+	#pragma unroll
+	for(int i = 0; i < DEPTH; i++){
+
+		float t;
+		int id = 0;
+		if (!intersect(r, t, id)) break; // miss
+
+		const Sphere &obj = spheres[id];
+		float3 x = r.origin + r.dir*t;
+		float3 n = obj.normal(x);
+		float3 nl = dot(n, r.dir) < 0 ? n : n * -1;
+		float3 albedo = obj.color;
+
+		float russianRouletteProb = luma(albedo); 
+		if (i >= 5){
+			if (curand_uniform(&state[idx]) < russianRouletteProb) 
+				albedo /= russianRouletteProb; 
+			else {
+				result += multiplier * obj.emision;
+				break;
+			}
+		} 
+
+		switch(obj.refl){
+			case DIFF: diff(state, idx, nl, x, albedo, obj, multiplier, result, r); break;
+			case SPEC: spec(state, idx, n, x, albedo, obj, multiplier, result, r); break;
+			case REFR: refr(state, idx, n, nl, x, albedo, obj, multiplier, result, r); break;
+		}
+
+	}
+
+	return result;
+}
+
+
+/*
+__device__ float3 radiance(const Ray &r, int depth, curandStatePhilox4_32_10_t *state, int idx) {
 	// Limit max depth (or you'll run into a stackoverflow on some scenes)
 	if (depth > DEPTH) return make_float3(0);
 
@@ -36,8 +154,6 @@ __device__ inline float3 radiance(const Ray &r, int depth, curandState *state, i
 	// albedo
 	float3 albedo = obj.color;
 
-
-
 	// Russian Roulette:
 	// probability to continue the ray (the less reflective the material, the lower)
 	// modified to use luma rather than max(r, max(g, b))
@@ -48,9 +164,6 @@ __device__ inline float3 radiance(const Ray &r, int depth, curandState *state, i
 			albedo /= russianRouletteProb; // boost the ray to compesnate for the probability of terminating it
 		else 
 			return obj.emision; // terminate the ray
-
-
-
 
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		// generate cosine weighted points on the upper hemisphere through inverse transform sampling:
@@ -79,7 +192,7 @@ __device__ inline float3 radiance(const Ray &r, int depth, curandState *state, i
 		// note that the cosine term in the integrand gets canceled by the cosine weighted pdf from which we sample the random direction
 		// we assume that PI was already encoded in the brdf
 		return obj.emision + albedo*radiance(Ray(x, d), depth, state, idx);
-	}
+	} 
 	else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
 	{
 		// reflection around the normal:
@@ -175,7 +288,6 @@ __device__ inline float3 radiance(const Ray &r, int depth, curandState *state, i
 		else
 			return obj.emision + albedo * radiance(Ray(x, tdir), depth, state, idx)*TP; //refract
 	}
-		
 }
-
+*/
 #endif

@@ -68,6 +68,7 @@ __device__ inline bool intersect(const Ray &r, float &t, int &id) {
 	float d;
 	float inf = t = FLT_MAX;
 	float eps = 1e-4;
+	#pragma unroll
 	for (int i = n; i--;) 
 		if ((d = spheres[i].intersect(r)) > eps && d < t){ 
 			t = d; 

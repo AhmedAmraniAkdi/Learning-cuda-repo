@@ -1,5 +1,11 @@
 // https://github.com/vchizhov/smallpt-explained/blob/master/smallpt_explained.cpp
 
+// problem: stack overflow on gpu, too many recursion calls
+// solution: make radiance function iterative: have a queue where u expand rays (bcs we have reflection+refraction), have it with hardcoded limit
+// what is implemented: iterative version in case of refl+refrac, just have a probability it will take 1 or the other!
+
+// the more elegant code is to have different kernels,also more work per thread, etc. and so on, maybe later
+
 #include <cuda_runtime.h>
 #include <helper_cuda.h>
 #include <helper_math.h>
@@ -10,6 +16,7 @@
 #include <stdio.h>
 
 #include "spheres_rays.cuh"
+#include "radiance.cuh"
 
 
 #define W 1024
@@ -19,7 +26,7 @@
 #define BLOCKDIMX 32
 #define BLOCKDIMY 4
 
-
+//https://forums.developer.nvidia.com/t/curand-init-sequence-number-problem/56573
 __global__ void smallpt_kernel(float3 *d_img, curandStatePhilox4_32_10_t *state, float3 cx, float3 cy, Ray cam){
 
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -31,7 +38,7 @@ __global__ void smallpt_kernel(float3 *d_img, curandStatePhilox4_32_10_t *state,
 
     int i = (H - idy - 1)*W + idx; // img comes reversed
 
-    d_img += id;
+    d_img += i;
 
     curand_init(id, id, 0, &state[id]);
 
@@ -39,9 +46,7 @@ __global__ void smallpt_kernel(float3 *d_img, curandStatePhilox4_32_10_t *state,
 
     float3 acum = make_float3(0);
 
-    acum.x = curand_uniform (&state[id]);
-
-    /*#pragma unroll
+    #pragma unroll
     for(int sy = 0; sy < 2; sy++){
 
         #pragma unroll
@@ -58,14 +63,13 @@ __global__ void smallpt_kernel(float3 *d_img, curandStatePhilox4_32_10_t *state,
                 float3 d = cx * (((sx + .5 + dx) / 2 + idx) / W - .5) +
                     cy * (((sy + .5 + dy) / 2 + idy) / H - .5) + cam.dir;
 
-                //r = r + radiance(Ray(cam.origin + d * 140, normalize(d)), 0, state, id)*(1. / samps);
-                r = make_float3(0);
+                r = r + radiance(Ray(cam.origin + d * 140, normalize(d)), 0, state, id);
 
             }
-
+            r = r * (1./samps);
             acum = acum + clamp(r, 0, 1) *.25;
         }
-    }*/
+    }
 
     d_img[0] = acum;
 }
@@ -86,8 +90,6 @@ int main(){
     float3 cy = normalize(cross(cx, cam.dir)) * fovScale;
 
     float3 *h_img = (float3 *)malloc(sizeof(float3) * H * W);
-
-	printf("hi there\n");
     
 	// cuda variables
 
@@ -104,8 +106,6 @@ int main(){
 
     dim3 dimBlock(BLOCKDIMX, BLOCKDIMY);
     dim3 dimGrid((W + BLOCKDIMX - 1)/BLOCKDIMX, (H + BLOCKDIMY - 1)/BLOCKDIMY);
-
-	printf("hi there\n");
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -125,11 +125,11 @@ int main(){
 	cudaMemcpy(h_img, d_img,  H * W * sizeof(float3), cudaMemcpyDeviceToHost);
     checkCudaErrors(cudaGetLastError());
 
-	/*FILE *f = fopen("image.ppm", "w");         // Write image to PPM file.
+	FILE *f = fopen("image.ppm", "w");         // Write image to PPM file.
 	fprintf(f, "P3\n%d %d\n%d\n", W, H, 255);
 	for (int i = 0; i < W*H; i++)
 		fprintf(f, "%d %d %d ", toInt(h_img[i].x), toInt(h_img[i].y), toInt(h_img[i].z));
-*/
+
     cudaEventDestroy(start);
     cudaEventDestroy(stop);
     free(h_img);
