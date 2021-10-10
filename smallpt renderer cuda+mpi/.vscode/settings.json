@@ -72,6 +72,7 @@
         "map": "cpp",
         "set": "cpp",
         "xtree": "cpp",
-        "__locale": "cpp"
+        "__locale": "cpp",
+        "__config": "cpp"
     }
 }
