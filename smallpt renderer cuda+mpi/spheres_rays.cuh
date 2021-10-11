@@ -5,8 +5,6 @@
 #include <helper_cuda.h>
 #include <helper_math.h>
 
-#define numspheres 9
-
 struct Ray{
     float3 origin, dir;
     __host__  __device__ Ray(float3 origin, float3 dir) : origin(origin), dir(dir) {}
@@ -47,7 +45,8 @@ struct Sphere {
 };
 
 // all threads read the same sphere one by one, all spheres, and store the closest one
-Sphere spheres_cpu[] = {//Scene: radius, position, emission, color, material
+//#define numspheres 9
+/*Sphere spheres_cpu[] = {//Scene: radius, position, emission, color, material
   Sphere(1e5, make_float3(1e5 + 1,40.8,81.6), make_float3(0),make_float3(.75,.25,.25),DIFF),//Left
   Sphere(1e5, make_float3(-1e5 + 99,40.8,81.6),make_float3(0),make_float3(.25,.25,.75),DIFF),//Rght
   Sphere(1e5, make_float3(50,40.8, 1e5),     make_float3(0),make_float3(.75,.75,.75),DIFF),//Back
@@ -57,6 +56,26 @@ Sphere spheres_cpu[] = {//Scene: radius, position, emission, color, material
   Sphere(16.5,make_float3(27,16.5,47),       make_float3(0),make_float3(1,1,1)*.999, SPEC),//Mirr
   Sphere(16.5,make_float3(73,16.5,78),       make_float3(0),make_float3(1,1,1)*.999, REFR),//Glas
   Sphere(600, make_float3(50,681.6 - .27,81.6),make_float3(12,12,12),  make_float3(0), DIFF) //Lite
+};*/
+
+// new scene 
+#define numspheres 15
+Sphere spheres_cpu[] = {//Scene: radius, position, emission, color, material
+  Sphere(1e5, make_float3(1e5 + 1,40.8,81.6), make_float3(0),make_float3(.75,.25,.25),DIFF),//Left
+  Sphere(1e5, make_float3(-1e5 + 99,40.8,81.6),make_float3(0),make_float3(.25,.25,.75),DIFF),//Rght
+  Sphere(1e5, make_float3(50,40.8, 1e5),     make_float3(0),make_float3(.75,.75,.75),DIFF),//Back
+  Sphere(1e5, make_float3(50,40.8,-1e5 + 170), make_float3(0),make_float3(0),           DIFF),//Frnt
+  Sphere(1e5, make_float3(50, 1e5, 81.6),    make_float3(0),make_float3(.75,.75,.75),DIFF),//Botm
+  Sphere(1e5, make_float3(50,-1e5 + 81.6,81.6),make_float3(0),make_float3(.75,.75,.75),DIFF),//Top
+  Sphere(16.5,make_float3(27,16.5,47),make_float3(0),make_float3(1,1,1)*.999, SPEC),//Mirr
+  Sphere(16.5,make_float3(73,16.5,78),make_float3(0),make_float3(1,1,1)*.999, REFR),//Glas
+  Sphere(10,make_float3(15,45,112),make_float3(0),make_float3(1,1,1)*.999, DIFF),//whit
+  Sphere(15,make_float3(16,16,130),make_float3(0),make_float3(1,1,0)*.999, REFR),// big yello
+  Sphere(7.5,make_float3(40,8,120),make_float3(0),make_float3(1,1,0)*.999, REFR),//small yello mid
+  Sphere(8.5,make_float3(60,9,110),make_float3(0),make_float3(1,1,0)*.999, REFR),//small yello righto
+  Sphere(10,make_float3(80,12,92),make_float3(0),make_float3(0,1,0)*.999, DIFF),//greeno
+  Sphere(5,make_float3(50,75,81.6),make_float3(0),make_float3(0, .682, .999), DIFF),//blue
+  Sphere(600, make_float3(50,681.6 - .27,81.6),make_float3(12,12,12),  make_float3(0), DIFF) //Lite
 };
 
 __constant__ Sphere spheres[numspheres];
@@ -64,16 +83,16 @@ __constant__ Sphere spheres[numspheres];
 int toInt(float x) { return int(pow(clamp(x, 0.0, 1.0), 1 / 2.2) * 255 + .5); }
 
 __device__ inline bool intersect(const Ray &r, float &t, int &id) {
-	int n = numspheres;
 	float d;
-	float inf = t = FLT_MAX;
+	float inf = FLT_MAX;
 	float eps = 1e-4;
 	#pragma unroll
-	for (int i = n; i--;) 
+	for (int i = 0; i < numspheres; i++){
 		if ((d = spheres[i].intersect(r)) > eps && d < t){ 
 			t = d; 
 			id = i; 
 		}
+	}
 	return t < inf;
 }
 

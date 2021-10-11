@@ -12,40 +12,36 @@
     #define M_PI 3.14159265358979323846
 #endif
 
-__device__ inline float luma(const float3& color){
-	return dot(color, make_float3(0.2126f, 0.7152f, 0.0722f));
-}
+__device__ inline void diff(/*curandStatePhilox4_32_10_t*/ curandState_t *state, int idx, float3 nl, float3 x, float3 albedo, float3 &multiplier, Ray &r){
+	
+	float phi = 2 * M_PI * curand_uniform(&state[idx]);
+	float r2 = curand_uniform(&state[idx]);
+	float sinTheta = sqrt(r2);
+	float cosTheta = sqrt(1 - r2);
+	float3 w = nl;
+	float3 u = normalize(cross(fabs(w.x) > .1 ? make_float3(0, 1, 0) : make_float3(1, 0, 0), w));
+	float3 v = cross(w, u);
+	float3 d = normalize(u*cos(phi)*sinTheta + v * sin(phi)*sinTheta + w * cosTheta);
 
-__device__ void diff(curandStatePhilox4_32_10_t *state, int idx, float3 nl, float3 x, float3 albedo, Sphere obj, float3 &multiplier, float3 &result, Ray &r){
-		float phi = 2 * M_PI * curand_uniform(&state[idx]);
-		float r2 = curand_uniform(&state[idx]);
-		float sinTheta = sqrt(r2);
-		float cosTheta = sqrt(1 - r2);
-		float3 w = nl;
-		float3 u = normalize(cross(fabs(w.x) > .1 ? make_float3(0, 1, 0) : make_float3(1, 0, 0), w));
-		float3 v = cross(w, u);
-		float3 d = normalize(u*cos(phi)*sinTheta + v * sin(phi)*sinTheta + w * cosTheta);
-
-		result += multiplier * obj.emision;
-		r.origin = x;
-		r.dir = d;
-		multiplier = albedo;
+	// https://github.com/straaljager/GPU-path-tracing-with-CUDA-tutorial-1/blob/master/smallptCUDA.cu
+	// feels nice, did it correctly
+	r.origin = x + 0.05*nl; // offset ray origin slightly to prevent self intersection - i would have never found the error HAHAHAH
+	r.dir = d;
+	multiplier *= albedo;
 
 }
 
-__device__ void spec(curandStatePhilox4_32_10_t *state, int idx, float3 n, float3 x, float3 albedo, Sphere obj, float3 &multiplier, float3 &result, Ray &r){
+__device__ inline void spec(/*curandStatePhilox4_32_10_t*/ curandState_t *state, int idx, float3 n, float3 x, float3 albedo, float3 &multiplier, Ray &r){
 
-	    float3 refl = r.dir - n * 2 * dot(n, r.dir);
+	float3 refl = r.dir - n * 2 * dot(n, r.dir);
 
-		result += multiplier * obj.emision;
-		r.origin = x;
-		r.dir = refl;
-		multiplier = albedo;
+	r.origin = x;
+	r.dir = refl;
+	multiplier *= albedo;
 
 }
 
-__device__ void refr(curandStatePhilox4_32_10_t *state, int idx, float3 n, float3 nl, float3 x, float3 albedo, Sphere obj, float3 &multiplier, float3 &result, Ray &r){
-
+__device__ inline void refr(/*curandStatePhilox4_32_10_t*/ curandState_t *state, int idx, float3 n, float3 nl, float3 x, float3 albedo, float3 &multiplier, Ray &r){
 
 	Ray reflRay(x, r.dir - n * 2 * dot(n,r.dir));
 	bool into = dot(n,nl) > 0;
@@ -56,10 +52,9 @@ __device__ void refr(curandStatePhilox4_32_10_t *state, int idx, float3 n, float
 	float cosTheta2Sqr;
 
 	if ((cosTheta2Sqr = 1 - nnt * nnt*(1 - cosTheta * cosTheta)) < 0){
-		result += multiplier * obj.emision;
 		r.origin = reflRay.origin;
 		r.dir = reflRay.dir;
-		multiplier = albedo;
+		multiplier *= albedo;
 		return;
 	} 
 
@@ -79,21 +74,19 @@ __device__ void refr(curandStatePhilox4_32_10_t *state, int idx, float3 n, float
 
 	// Russian roulette decision (between reflected and refracted ray)
 	if (curand_uniform(&state[idx]) < P){//reflect
-		result += multiplier * obj.emision;
 		r.origin = reflRay.origin;
 		r.dir = reflRay.dir;
 		multiplier = albedo * RP;
 	}
 	else{//refract
-		result += multiplier * obj.emision;
 		r.origin = x;
 		r.dir = tdir;
-		multiplier = albedo * TP;
+		multiplier *= albedo * TP;
 	}
 }
 
 
-__device__ float3 radiance(Ray r, int depth, curandStatePhilox4_32_10_t *state, int idx){
+__device__ inline float3 radiance(Ray r, /*curandStatePhilox4_32_10_t*/ curandState_t *state, int idx){
 
 	float3 result = make_float3(0);
 	float3 multiplier = make_float3(1);
@@ -101,9 +94,9 @@ __device__ float3 radiance(Ray r, int depth, curandStatePhilox4_32_10_t *state, 
 	#pragma unroll
 	for(int i = 0; i < DEPTH; i++){
 
-		float t;
+		float t = FLT_MAX;
 		int id = 0;
-		if (!intersect(r, t, id)) break; // miss
+		if (!intersect(r, t, id)) return make_float3(0); // miss
 
 		const Sphere &obj = spheres[id];
 		float3 x = r.origin + r.dir*t;
@@ -111,20 +104,12 @@ __device__ float3 radiance(Ray r, int depth, curandStatePhilox4_32_10_t *state, 
 		float3 nl = dot(n, r.dir) < 0 ? n : n * -1;
 		float3 albedo = obj.color;
 
-		float russianRouletteProb = luma(albedo); 
-		if (i >= 5){
-			if (curand_uniform(&state[idx]) < russianRouletteProb) 
-				albedo /= russianRouletteProb; 
-			else {
-				result += multiplier * obj.emision;
-				break;
-			}
-		} 
+		result += obj.emision * multiplier;
 
 		switch(obj.refl){
-			case DIFF: diff(state, idx, nl, x, albedo, obj, multiplier, result, r); break;
-			case SPEC: spec(state, idx, n, x, albedo, obj, multiplier, result, r); break;
-			case REFR: refr(state, idx, n, nl, x, albedo, obj, multiplier, result, r); break;
+			case DIFF: diff(state, idx, nl, x, albedo, multiplier, r); break;
+			case SPEC: spec(state, idx, n, x, albedo, multiplier, r); break;
+			case REFR: refr(state, idx, n, nl, x, albedo, multiplier, r); break;
 		}
 
 	}
@@ -134,7 +119,7 @@ __device__ float3 radiance(Ray r, int depth, curandStatePhilox4_32_10_t *state, 
 
 
 /*
-__device__ float3 radiance(const Ray &r, int depth, curandStatePhilox4_32_10_t *state, int idx) {
+__device__ float3 radiance_recursive(const Ray &r, int depth, curandStatePhilox4_32_10_t *state, int idx) {
 	// Limit max depth (or you'll run into a stackoverflow on some scenes)
 	if (depth > DEPTH) return make_float3(0);
 
@@ -191,7 +176,7 @@ __device__ float3 radiance(const Ray &r, int depth, curandStatePhilox4_32_10_t *
 		// radiance += emitted + brdf * radiance * cos(theta)/cos(theta) * PI
 		// note that the cosine term in the integrand gets canceled by the cosine weighted pdf from which we sample the random direction
 		// we assume that PI was already encoded in the brdf
-		return obj.emision + albedo*radiance(Ray(x, d), depth, state, idx);
+		return obj.emision + albedo*radiance_recursive(Ray(x, d), depth, state, idx);
 	} 
 	else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
 	{
@@ -216,7 +201,7 @@ __device__ float3 radiance(const Ray &r, int depth, curandStatePhilox4_32_10_t *
 
 		// rendering equation estimator (integrand/pdf) for mirror brdf
 		// mirror brdf = albedo * delta(theta_refl-theta_in) * delta(phi_refl - phi_in +- pi)  / (cos(theta_in) * sin(theta_in))
-		return obj.emision + albedo * radiance(Ray(x, refl), depth, state, idx);
+		return obj.emision + albedo * radiance_recursive(Ray(x, refl), depth, state, idx);
 	}
 	
 	// refraction in the plane defined by d and n:
@@ -254,7 +239,7 @@ __device__ float3 radiance(const Ray &r, int depth, curandStatePhilox4_32_10_t *
 	float cosTheta2Sqr;
 
 	if ((cosTheta2Sqr = 1 - nnt * nnt*(1 - cosTheta * cosTheta)) < 0)    // Total internal reflection
-		return obj.emision + albedo*radiance(reflRay, depth, state, idx);
+		return obj.emision + albedo*radiance_recursive(reflRay, depth, state, idx);
 
 	// refracted ray direction
 	float3 tdir = normalize(r.dir*nnt - n * ((into ? 1 : -1)*(cosTheta*cosTheta + sqrt(cosTheta2Sqr))));
@@ -278,15 +263,15 @@ __device__ float3 radiance(const Ray &r, int depth, curandStatePhilox4_32_10_t *
 	// splitting below depth 3
 	if (depth < 3)
 	{
-		return obj.emision + albedo*(radiance(reflRay, depth, state, idx)*Re + radiance(Ray(x, tdir), depth, state, idx)*Tr); // weighted relfection + refraction based on fresnel
+		return obj.emision + albedo*(radiance_recursive(reflRay, depth, state, idx)*Re + radiance_recursive(Ray(x, tdir), depth, state, idx)*Tr); // weighted relfection + refraction based on fresnel
 	}
 	else
 	{
 		// Russian roulette decision (between reflected and refracted ray)
 		if (curand_uniform(&state[idx]) < P)
-			return obj.emision + albedo * radiance(reflRay, depth, state, idx)*RP; //reflect
+			return obj.emision + albedo * radiance_recursive(reflRay, depth, state, idx)*RP; //reflect
 		else
-			return obj.emision + albedo * radiance(Ray(x, tdir), depth, state, idx)*TP; //refract
+			return obj.emision + albedo * radiance_recursive(Ray(x, tdir), depth, state, idx)*TP; //refract
 	}
 }
 */

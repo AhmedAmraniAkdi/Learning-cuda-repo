@@ -4,7 +4,7 @@
 // solution: make radiance function iterative: have a queue where u expand rays (bcs we have reflection+refraction), have it with hardcoded limit
 // what is implemented: iterative version in case of refl+refrac, just have a probability it will take 1 or the other!
 
-// the more elegant code is to have different kernels,also more work per thread, etc. and so on, maybe later
+// the more elegant code is to have different kernels, also more work per thread, etc. and so on, maybe later
 
 #include <cuda_runtime.h>
 #include <helper_cuda.h>
@@ -21,57 +21,63 @@
 
 #define W 1024
 #define H 768
-#define samps 64 // samples per subpixel
+#define samps 1024 // samples per subpixel
 
 #define BLOCKDIMX 32
-#define BLOCKDIMY 4
+#define BLOCKDIMY 2
+#define XSTEP 1
 
-//https://forums.developer.nvidia.com/t/curand-init-sequence-number-problem/56573
-__global__ void smallpt_kernel(float3 *d_img, curandStatePhilox4_32_10_t *state, float3 cx, float3 cy, Ray cam){
-
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int idy = blockIdx.y * blockDim.y + threadIdx.y;
-
-    int id = idy * W + idx;
-
-    if(idx >= W || idy >= H) return;
-
-    int i = (H - idy - 1)*W + idx; // img comes reversed
-
-    d_img += i;
-
-    curand_init(id, id, 0, &state[id]);
-
-    float3 r = make_float3(0);
-
-    float3 acum = make_float3(0);
+//https://forums.developer.nvidia.com/t/curand-init-sequence-number-problem/56573 however xorwow is half the time of philox
+__global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ curandState_t *state, float3 cx, float3 cy, Ray cam){
 
     #pragma unroll
-    for(int sy = 0; sy < 2; sy++){
+    for(int step = 0; step < XSTEP; step++){
+
+        int idx = blockIdx.x * blockDim.x * XSTEP + threadIdx.x + step * BLOCKDIMX;
+        int idy = blockIdx.y * blockDim.y + threadIdx.y;
+
+        int id = idy * W + idx;
+
+        if(idx >= W || idy >= H) return;
+
+        int i = (H - idy - 1 ) * W + idx; // img comes reversed
+
+        if(step == 0) {
+            curand_init(id, 0, 0, &state[id]);
+        }
+
+        float3 r = make_float3(0);
+
+        float3 acum = make_float3(0);
 
         #pragma unroll
-        for(int sx = 0; sx < 2; sx++, r = make_float3(0)){
+        for(int sy = 0; sy < 2; sy++){
 
             #pragma unroll
-            for(int s = 0; s < samps ; s++){// each sample is independent, can have another grid doing samps/2 and then atomic sum
+            for(int sx = 0; sx < 2; sx++, r = make_float3(0)){
 
-                float r1 = 2 * curand_uniform (&state[id]);
-                float dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
-                float r2 = 2 * curand_uniform (&state[id]);
-                float dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
+                #pragma unroll
+                for(int s = 0; s < samps ; s++){// each sample is independent, can have another grid doing samps/2 and then atomic sum
 
-                float3 d = cx * (((sx + .5 + dx) / 2 + idx) / W - .5) +
-                    cy * (((sy + .5 + dy) / 2 + idy) / H - .5) + cam.dir;
+                    float r1 = 2 * curand_uniform (&state[id]);
+                    float dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
+                    float r2 = 2 * curand_uniform (&state[id]);
+                    float dy = r2 < 1 ? sqrt(r2) - 1 : 1 - sqrt(2 - r2);
 
-                r = r + radiance(Ray(cam.origin + d * 140, normalize(d)), 0, state, id);
+                    float3 d = cx * (((sx + .5 + dx) / 2 + idx) / W - .5) +
+                        cy * (((sy + .5 + dy) / 2 + idy) / H - .5) + cam.dir;
 
+                    r = r + radiance(Ray(cam.origin + d * 140, normalize(d)), state, id) * (1./samps);
+
+                }
+                acum = acum + clamp(r, 0, 1) * 0.25;
             }
-            r = r * (1./samps);
-            acum = acum + clamp(r, 0, 1) *.25;
         }
+
+        d_img[i] = acum;
+
     }
 
-    d_img[0] = acum;
 }
 
 
@@ -93,8 +99,8 @@ int main(){
     
 	// cuda variables
 
-    curandStatePhilox4_32_10_t *devStates;
-    cudaMalloc((void **)&devStates, sizeof(curandStatePhilox4_32_10_t) * W * H);
+    /*curandStatePhilox4_32_10_t*/ curandState_t *devStates;
+    cudaMalloc((void **)&devStates, sizeof(/*curandStatePhilox4_32_10_t*/ curandState_t) * W * H );
 	checkCudaErrors(cudaGetLastError());
 
     float3 *d_img;
@@ -105,7 +111,7 @@ int main(){
 	checkCudaErrors(cudaGetLastError());
 
     dim3 dimBlock(BLOCKDIMX, BLOCKDIMY);
-    dim3 dimGrid((W + BLOCKDIMX - 1)/BLOCKDIMX, (H + BLOCKDIMY - 1)/BLOCKDIMY);
+    dim3 dimGrid((W + BLOCKDIMX * XSTEP - 1)/BLOCKDIMX/XSTEP, (H + BLOCKDIMY - 1)/BLOCKDIMY);
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
