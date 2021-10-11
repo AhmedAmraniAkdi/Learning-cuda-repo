@@ -4,3 +4,5 @@ Cuda version and multigpu cuda version using openmpi and AWS F1 gpu cluster
 
 Goal is to use mpi and aws gpu cluster on a simple program.
 
+![Alt text](/relative/path/to/img.png?raw=true "Img")
+

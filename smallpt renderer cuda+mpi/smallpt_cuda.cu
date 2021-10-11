@@ -67,7 +67,7 @@ __global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ cur
                     float3 d = cx * (((sx + .5 + dx) / 2 + idx) / W - .5) +
                         cy * (((sy + .5 + dy) / 2 + idy) / H - .5) + cam.dir;
 
-                    r = r + radiance(Ray(cam.origin + d * 140, normalize(d)), state, id) * (1./samps);
+                    r = r + radiance(Ray(cam.origin + d * 130, normalize(d)), state, id) * (1./samps);
 
                 }
                 acum = acum + clamp(r, 0, 1) * 0.25;

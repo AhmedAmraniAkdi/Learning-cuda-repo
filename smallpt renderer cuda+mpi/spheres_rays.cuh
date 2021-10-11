@@ -65,16 +65,15 @@ Sphere spheres_cpu[] = {//Scene: radius, position, emission, color, material
   Sphere(1e5, make_float3(-1e5 + 99,40.8,81.6),make_float3(0),make_float3(.25,.25,.75),DIFF),//Rght
   Sphere(1e5, make_float3(50,40.8, 1e5),     make_float3(0),make_float3(.75,.75,.75),DIFF),//Back
   Sphere(1e5, make_float3(50,40.8,-1e5 + 170), make_float3(0),make_float3(0),           DIFF),//Frnt
-  Sphere(1e5, make_float3(50, 1e5, 81.6),    make_float3(0),make_float3(.75,.75,.75),DIFF),//Botm
+  Sphere(1e5, make_float3(50, 1e5, 81.6),    make_float3(0),make_float3(.75,.75,.75),REFR),//Botm
   Sphere(1e5, make_float3(50,-1e5 + 81.6,81.6),make_float3(0),make_float3(.75,.75,.75),DIFF),//Top
   Sphere(16.5,make_float3(27,16.5,47),make_float3(0),make_float3(1,1,1)*.999, SPEC),//Mirr
-  Sphere(16.5,make_float3(73,16.5,78),make_float3(0),make_float3(1,1,1)*.999, REFR),//Glas
-  Sphere(10,make_float3(15,45,112),make_float3(0),make_float3(1,1,1)*.999, DIFF),//whit
+  Sphere(16.5,make_float3(73,16.5,78),make_float3(0),make_float3(0.75,0,0.25), REFR),//violet
+  Sphere(10,make_float3(15,45,112),make_float3(0.01),make_float3(1,0.5,0)*.999, REFR),//whit
   Sphere(15,make_float3(16,16,130),make_float3(0),make_float3(1,1,0)*.999, REFR),// big yello
   Sphere(7.5,make_float3(40,8,120),make_float3(0),make_float3(1,1,0)*.999, REFR),//small yello mid
   Sphere(8.5,make_float3(60,9,110),make_float3(0),make_float3(1,1,0)*.999, REFR),//small yello righto
-  Sphere(10,make_float3(80,12,92),make_float3(0),make_float3(0,1,0)*.999, DIFF),//greeno
-  Sphere(5,make_float3(50,75,81.6),make_float3(0),make_float3(0, .682, .999), DIFF),//blue
+  Sphere(5,make_float3(50,75,81.6),make_float3(0),make_float3(0, .682, .999), REFR),//blue
   Sphere(600, make_float3(50,681.6 - .27,81.6),make_float3(12,12,12),  make_float3(0), DIFF) //Lite
 };
 
