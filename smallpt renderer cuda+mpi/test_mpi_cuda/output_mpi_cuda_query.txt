@@ -1,0 +1,14 @@
+Hello World from process 0 out of 2 processes!!!
+Hello World from process 1 out of 2 processes!!!
+starting device query
+starting device query
+0 - Detected 1 CUDA Capable device(s)
+
+Device 0: "GeForce GTX 960M"
+0 -  CUDA Driver Version / Runtime Version          11.0 / 11.0
+0 -  CUDA Capability Major/Minor version number:    5.0
+1 - Detected 1 CUDA Capable device(s)
+
+Device 0: "GeForce GTX 960M"
+1 -  CUDA Driver Version / Runtime Version          11.0 / 11.0
+1 -  CUDA Capability Major/Minor version number:    5.0
