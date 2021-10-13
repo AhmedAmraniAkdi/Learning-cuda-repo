@@ -12,9 +12,9 @@ multi process service will allow overlap of kernel executions since gpu ressourc
 
 2 ways for using mpi on smallpt that come to my head:
 
-- each process does samples/num_processes samples and then we sum them up.
+- each process does samples/num_processes samples and then we sum them up with mpi reduce
 
-- divide the img between the imgs and each one processes its portion.
+- divide the img between the imgs and each one processes its portion and then mpi gather.
 
 The first way is the one implemented, although my intuition tells me the second is better, since you only have to allocate H*W*3/num_procceses floats
 which allows the kernels to start earlier (there won't be that much of a difference since the program is computation bound - checked with profiling).
