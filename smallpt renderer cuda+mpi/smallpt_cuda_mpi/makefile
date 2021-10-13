@@ -15,13 +15,14 @@ LIBSCUDA = cuda.lib cudart.lib
 ADDITIONAL_LIBS = -lcurand
 NVCC_FLAGS = -arch=sm_50 -Wno-deprecated-gpu-targets -Xptxas -v -lineinfo
 
+NUM_PROCCESES = 4
 
 .PHONY: all
 all: remove smallpt_cuda_mpi
 
 cuda_ms_mpi_smallpt: cuda_ms_mpi_smallpt.obj
-	cl smallpt_mpi_cuda.cpp $< $(LIBSCUDA) $(MPI_H) $(FLAGS) /link $(MPI_LIB) $(LIBSCUDAPATH)
-	mpiexec -np 2 .\smallpt_mpi_cuda.exe > output_smallpt_mpi_cuda.txt
+	cl smallpt_mpi_cuda.c $< $(LIBSCUDA) $(MPI_H) $(FLAGS) /link $(MPI_LIB) $(LIBSCUDAPATH)
+	mpiexec -np $(NUM_PROCCESES) .\smallpt_mpi_cuda.exe > output_smallpt_mpi_cuda.txt
 
 cuda_ms_mpi_smallpt.obj:
 	nvcc  -c smallpt_cuda_mpi.cu $(INCSAMPLES_H) $(OTHER_HEADERS) $(ADDITIONAL_LIBS) $(NVCC_FLAGS)

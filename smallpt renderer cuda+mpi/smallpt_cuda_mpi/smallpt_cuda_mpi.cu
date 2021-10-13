@@ -17,7 +17,7 @@
 
 #define W 1024
 #define H 768
-#define samps 1024/num_processes_mpi // samples per subpixel
+#define samps 1024 // samples per subpixel
 
 #define BLOCKDIMX 32
 #define BLOCKDIMY 2
@@ -53,7 +53,7 @@ __global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ cur
             for(int sx = 0; sx < 2; sx++, r = make_float3(0)){
 
                 #pragma unroll
-                for(int s = 0; s < samps ; s++){// each sample is independent, can have another grid doing samps/2 and then atomic sum
+                for(int s = 0; s < samps/num_processes_mpi ; s++){// each sample is independent, can have another grid doing samps/2 and then atomic sum
 
                     float r1 = 2 * curand_uniform (&state[id]);
                     float dx = r1 < 1 ? sqrt(r1) - 1 : 1 - sqrt(2 - r1);
@@ -127,6 +127,12 @@ void smallpt_main(int my_rank, float *h_img_output){
 
 	cudaMemcpy(h_img, d_img,  H * W * sizeof(float3), cudaMemcpyDeviceToHost);
     checkCudaErrors(cudaGetLastError());
+
+    for (int i = 0; i < W*H; i++){
+        h_img[i].x = toInt(h_img[i].x);
+        h_img[i].y = toInt(h_img[i].y);
+        h_img[i].z = toInt(h_img[i].z);
+    }
 
 	/*FILE *f = fopen("image.ppm", "w");         // Write image to PPM file.
 	fprintf(f, "P3\n%d %d\n%d\n", W, H, 255);
