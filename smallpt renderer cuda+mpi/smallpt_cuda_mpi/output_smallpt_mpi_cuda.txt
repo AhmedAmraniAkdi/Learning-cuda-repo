@@ -1,0 +1,26 @@
+Hello World from process 0 out of 4 processes
+starting cuda function
+rank:0 Ray Tracing time: 23696.31835938 ms
+Hello World from process 3 out of 4 processes
+starting cuda function
+rank:3 Ray Tracing time: 23704.08789063 ms
+Hello World from process 2 out of 4 processes
+starting cuda function
+rank:2 Ray Tracing time: 47443.93750000 ms
+Hello World from process 1 out of 4 processes
+starting cuda function
+rank:1 Ray Tracing time: 47396.94140625 ms
+
+Measure-Command {mpiexec -np 4 .\smallpt_mpi_cuda.exe } > timing_mpi.txt
+
+Days              : 0
+Hours             : 0
+Minutes           : 1
+Seconds           : 39
+Milliseconds      : 181
+Ticks             : 991814512
+TotalDays         : 0,00114793346296296
+TotalHours        : 0,0275504031111111
+TotalMinutes      : 1,65302418666667
+TotalSeconds      : 99,1814512
+TotalMilliseconds : 99181,4512

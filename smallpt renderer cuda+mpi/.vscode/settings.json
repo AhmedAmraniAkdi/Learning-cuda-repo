@@ -73,6 +73,7 @@
         "set": "cpp",
         "xtree": "cpp",
         "__locale": "cpp",
-        "__config": "cpp"
+        "__config": "cpp",
+        "smallpt_cuda_mpi_h_.h": "c"
     }
 }

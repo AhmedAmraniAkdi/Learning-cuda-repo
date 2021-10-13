@@ -1,9 +1,20 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <mpi.h>
-#include "smallpt_cuda_mpi_h_.h"
+#include <math.h>
 
 #define H 768
 #define W 1024
+
+extern void smallpt_main(int my_rank, float *h_img_output);
+
+float clamp(float a, float m, float M){
+    return max(m, min(a, M));
+}
+
+int toInt(float x){ 
+    return (int)(pow(clamp(x, 0.0, 1.0), 1 / 2.2) * 255 + .5); 
+}
 
 
 int main()
@@ -36,8 +47,9 @@ int main()
     if(my_rank == 0){
         FILE *f = fopen("image_cuda_mpi.ppm", "w");         // Write image to PPM file.
         fprintf(f, "P3\n%d %d\n%d\n", W, H, 255);
-        for (int i = 0; i < W*H*3; i = i + 3)
-            fprintf(f, "%d %d %d ", h_img[i + 0], h_img[i + 1], h_img[i + 2]);
+        for (int i = 0; i < W*H*3; i = i + 3){
+            fprintf(f, "%d %d %d ", toInt(*(h_img + i + 0)), toInt(*(h_img + i + 1)), toInt(*(h_img + i + 2)));
+        }
 
     }
     free(h_img);

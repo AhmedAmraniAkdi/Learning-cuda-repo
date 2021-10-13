@@ -24,7 +24,7 @@
 #define XSTEP 1
 
 //https://forums.developer.nvidia.com/t/curand-init-sequence-number-problem/56573 however xorwow is half the time of philox
-__global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ curandState_t *state, float3 cx, float3 cy, Ray cam){
+__global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ curandState_t *state, float3 cx, float3 cy, Ray cam, int my_rank){
 
     #pragma unroll
     for(int step = 0; step < XSTEP; step++){
@@ -39,7 +39,7 @@ __global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ cur
         int i = (H - idy - 1 ) * W + idx; // img comes reversed
 
         if(step == 0) {
-            curand_init(id, 0, 0, &state[id]);
+            curand_init(id + W * H * my_rank, 0, 0, &state[id]); // diff seed per process
         }
 
         float3 r = make_float3(0);
@@ -66,18 +66,18 @@ __global__ void smallpt_kernel(float3 *d_img, /*curandStatePhilox4_32_10_t*/ cur
                     r = r + radiance(Ray(cam.origin + d * 130, normalize(d)), state, id) * (1./samps);
 
                 }
-                acum = acum + clamp(r, 0, 1) * 0.25;
+                acum = acum + r * 0.25;
             }
         }
 
-        d_img[i] = acum;
+        d_img[i] = acum ;//clamp(acum, 0, 1);
 
     }
 
 }
 
 
-void smallpt_main(int my_rank, float *h_img_output){
+extern "C" void smallpt_main(int my_rank, float *h_img_output){
 
     // https://en.wikipedia.org/wiki/Ray_tracing_(graphics)#Calculate_rays_for_rectangular_viewport
 
@@ -116,7 +116,7 @@ void smallpt_main(int my_rank, float *h_img_output){
     float elapsed_time;
 
     cudaEventRecord(start, 0);
-    smallpt_kernel<<<dimGrid, dimBlock>>>(d_img, devStates, cx, cy, cam);
+    smallpt_kernel<<<dimGrid, dimBlock>>>(d_img, devStates, cx, cy, cam, my_rank);
     checkCudaErrors(cudaGetLastError());
     cudaDeviceSynchronize();
     cudaEventRecord(stop, 0);
@@ -128,11 +128,11 @@ void smallpt_main(int my_rank, float *h_img_output){
 	cudaMemcpy(h_img, d_img,  H * W * sizeof(float3), cudaMemcpyDeviceToHost);
     checkCudaErrors(cudaGetLastError());
 
-    for (int i = 0; i < W*H; i++){
+    /*for (int i = 0; i < W*H; i++){
         h_img[i].x = toInt(h_img[i].x);
         h_img[i].y = toInt(h_img[i].y);
         h_img[i].z = toInt(h_img[i].z);
-    }
+    }*/
 
 	/*FILE *f = fopen("image.ppm", "w");         // Write image to PPM file.
 	fprintf(f, "P3\n%d %d\n%d\n", W, H, 255);

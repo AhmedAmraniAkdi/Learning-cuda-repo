@@ -1,0 +1,13 @@
+Measure-Command {.\smallpt_cuda.exe } gives:
+
+Days              : 0
+Hours             : 0
+Minutes           : 1
+Seconds           : 36
+Milliseconds      : 717
+Ticks             : 967172926
+TotalDays         : 0,0011194131087963
+TotalHours        : 0,0268659146111111
+TotalMinutes      : 1,61195487666667  
+TotalSeconds      : 96,7172926        
+TotalMilliseconds : 96717,2926    
