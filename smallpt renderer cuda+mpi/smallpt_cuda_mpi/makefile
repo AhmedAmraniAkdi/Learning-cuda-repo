@@ -3,28 +3,28 @@
 
 # windows - need to set env vars with vcvars64.bat when using cl from command line -- done when starting powershell with my psprofile
 
+
 MPI_H = /I"C:\Program Files (x86)\Microsoft SDKs\MPI\Include" /I"C:\Program Files (x86)\Microsoft SDKs\MPI\Include\x64"
 MPI_LIB = /machine:x64 /dynamicbase "msmpi.lib" /libpath:"C:\Program Files (x86)\Microsoft SDKs\MPI\Lib\x64" 
 FLAGS = /EHsc
 
 INCSAMPLES_H = -I "C:\ProgramData\NVIDIA Corporation\CUDA Samples\v11.0\common\inc"
+OTHER_HEADERS = -I "spheres_rays.cuh" -I "radiance.cuh"
 LIBSCUDAPATH = /LIBPATH:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.0\lib\x64" 
 LIBSCUDA = cuda.lib cudart.lib
+ADDITIONAL_LIBS = -lcurand
+NVCC_FLAGS = -arch=sm_50 -Wno-deprecated-gpu-targets -Xptxas -v -lineinfo
+
 
 .PHONY: all
-all: remove test_cuda_ms_mpi
+all: remove smallpt_cuda_mpi
 
-#test_ms_mpi:
-#	cl test_msmpi.cpp $(FLAGS) $(MPI_H) $(MPI_LIB)
-#	mpiexec -np 2 .\test_msmpi.exe
-#	del test_msmpi.obj test_msmpi.exe
+cuda_ms_mpi_smallpt: cuda_ms_mpi_smallpt.obj
+	cl smallpt_mpi_cuda.cpp $< $(LIBSCUDA) $(MPI_H) $(FLAGS) /link $(MPI_LIB) $(LIBSCUDAPATH)
+	mpiexec -np 2 .\smallpt_mpi_cuda.exe > output_smallpt_mpi_cuda.txt
 
-test_cuda_ms_mpi: device_query.obj
-	cl test_msmpi.cpp $< $(LIBSCUDA) $(MPI_H) $(FLAGS) /link $(MPI_LIB) $(LIBSCUDAPATH)
-	mpiexec -np 2 .\test_msmpi.exe > output_mpi_cuda_query.txt
-
-device_query.obj:
-	nvcc -c device_query.cu -arch=sm_50 -Wno-deprecated-gpu-targets $(INCSAMPLES_H)
+cuda_ms_mpi_smallpt.obj:
+	nvcc  -c smallpt_cuda_mpi.cu $(INCSAMPLES_H) $(OTHER_HEADERS) $(ADDITIONAL_LIBS) $(NVCC_FLAGS)
 
 .PHONY: remove
 remove:
